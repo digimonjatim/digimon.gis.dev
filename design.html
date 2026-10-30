@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>View Design - DIGIMON GIS</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css?v=7">
+<style>
+body{display:flex;flex-direction:column}
+.wrap{flex:1;display:grid;grid-template-columns:1fr 380px;min-height:0}
+#mapbox{position:relative;min-height:0}
+#map{height:100%}
+.leg{position:absolute;left:10px;top:124px;z-index:1000;background:#fff;border-radius:10px;padding:10px 12px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:12px;width:210px}
+.leg h4{margin:0 0 4px;font-size:12px}
+.leg h4:not(:first-child){margin-top:8px;padding-top:6px;border-top:1px solid #e3e9e6}
+.leg label{display:flex;align-items:center;gap:6px;margin:4px 0;cursor:pointer}
+.leg .n{margin-left:auto;color:var(--mute)}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.sidewrap{display:flex;flex-direction:column;min-height:0;background:#f7f9f8;border-left:1px solid var(--line)}
+#side{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+#foot{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 12px;background:#fff;border-top:1px solid var(--line)}
+#foot button{padding:9px 10px}
+#foot .full{grid-column:1/-1}
+.fb.wide{width:min(620px,100%)}
+.lgt{width:100%;border-collapse:collapse;font-size:12px}
+.lgt th{text-align:left;padding:6px;border-bottom:2px solid var(--line);font-size:11px;color:var(--mute);text-transform:uppercase}
+.lgt td{padding:7px 6px;border-bottom:1px solid #eef2f0}
+.lgp{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--mute)}
+.lgp button{padding:4px 10px;font-size:12px}
+.lgp button:disabled{opacity:.4;cursor:not-allowed}
+.bq{width:100%;border-collapse:collapse;font-size:13px}
+.bq td{padding:6px 0;border-bottom:1px solid #eef2f0}
+.bq td:last-child{text-align:right;font-weight:600}
+.bq tr.gap td{border:0;padding:3px 0}
+.tw th{border:1px solid #e3e9e6;padding:3px 6px;background:#f2f4f1;font-size:11px;text-align:left;white-space:nowrap}
+#boqCard details{border-top:1px solid #eef2f0;padding-top:8px;margin-top:10px}
+#fm{position:fixed;inset:0;background:rgba(15,42,44,.55);display:none;align-items:center;justify-content:center;z-index:15000;padding:16px}
+.fb{background:#fff;border-radius:12px;width:min(460px,100%);max-height:92vh;overflow:auto;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.fb h3{margin:0 0 2px;font-size:16px}
+.fsub{color:var(--mute);font-size:12px;margin-bottom:12px}
+.fbody{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fbody .full{grid-column:1/-1}
+.fbody label{display:block;font-size:12px;color:var(--mute);margin-bottom:3px}
+.fbody input,.fbody select{width:100%}
+.fact{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px}
+.card h3{margin:0 0 8px;font-size:13px;color:var(--acc)}
+.card small{color:var(--mute);display:block;font-size:11px}
+.big{font-size:18px;font-weight:600;word-break:break-word}
+.ptl{margin:0;font-size:16px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.kv .full{grid-column:1/-1}
+.kv div>div{word-break:break-word}
+.kv input{width:100%;margin-top:2px}
+.stbanner{display:flex;align-items:center;gap:10px;border-radius:12px;padding:10px 12px;border:1px solid transparent;margin-bottom:3px}
+.stbanner .ico{flex:none;width:40px;height:40px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 2px 5px rgba(0,0,0,.18),inset 0 -2px 0 rgba(0,0,0,.08)}
+.stbanner small{display:block;font-size:11px;opacity:.9}
+.stbanner .stv{font-size:15px;font-weight:600;line-height:1.25;word-break:break-word}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.col{display:flex;flex-direction:column;gap:8px}
+.col div>div{word-break:break-word}
+.btns{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+details summary{cursor:pointer;font-weight:600;font-size:13px}
+.li{padding:5px 0;border-bottom:1px solid #eef2f0;cursor:pointer;font-size:12px}
+.li:hover{color:var(--acc)}
+.tw{overflow:auto;max-height:320px;margin-top:8px}
+.tw table{border-collapse:collapse;font-size:11px}
+.tw td{border:1px solid #e3e9e6;padding:3px 6px;white-space:nowrap}
+@media(max-width:900px){body{height:auto}.wrap{grid-template-columns:1fr;grid-template-rows:55vh auto}#foot{position:sticky;bottom:0}}
+/* ---- Tampilan compact ---- */
+#side{padding:10px;gap:8px}
+.card{padding:10px}
+.card h3{margin:0 0 6px;font-size:12px}
+.kv{gap:5px 10px}
+.cols{gap:0 10px}.col{gap:5px}
+.ptl{font-size:15px}
+#foot{padding:8px 10px;gap:6px}#foot button{padding:6px 8px}
+.leg{padding:8px 10px;top:118px;font-size:11.5px}.leg label{margin:3px 0}
+.bq td{padding:4px 0}
+.fb{padding:14px}.fbody{gap:8px}.fact{margin-top:12px}
+</style>
+</head>
+<body>
+<div id="hdr"></div>
+<div class="wrap">
+  <div id="mapbox"><div id="map"></div><div class="leg" id="leg"></div></div>
+  <aside class="sidewrap"><div id="side"></div><div id="foot"></div></aside>
+</div>
+<div id="fm" role="dialog" aria-modal="true" aria-labelledby="fmT">
+  <div class="fb">
+    <h3 id="fmT"></h3><div class="fsub" id="fmS"></div>
+    <div class="fbody" id="fmB"></div>
+    <div class="fact"><button id="fmC" type="button">Batal</button><button id="fmOk" type="button" class="pri">Simpan</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="common.js?v=7"></script>
+<script>
+const areaId = new URLSearchParams(location.search).get('id');
+const COL = {customer:'#4b8f6b', odp:'#e8731a', prospect:'#2563eb'};
+const LABEL = {customer:'Pelanggan', odp:'ODP Plan', prospect:'Demand'};
+const KS = {Point:{n:'Titik',c:'#7c3aed'}, LineString:{n:'Garis',c:'#e11d48'}, Polygon:{n:'Polygon',c:'#0891b2'}};
+const NOFN = 'PGRST202';   // kode error PostgREST: fungsi tidak ditemukan
+let compat = false;
+function inRing(x, y, r){ let c = false; for(let i = 0, j = r.length - 1; i < r.length; j = i++){ const [xi, yi] = r[i], [xj, yj] = r[j]; if((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; }
+// Pakai get_area (005); jika belum terpasang, pakai get_areas + tabel project_areas
+async function loadArea(id){
+  const r = await sb.rpc('get_area', {p_id: id});
+  if(!r.error) return r.data;
+  if(r.error.code !== NOFN) throw new Error(r.error.message);
+  compat = true;
+  const g = await sb.rpc('get_areas');
+  if(g.error) throw new Error(g.error.message);
+  const f = g.data.features.find(x => x.properties.id === id); if(!f) return null;
+  const t = await sb.from('project_areas').select('created_at,completed_at').eq('id', id).maybeSingle();
+  if(t.data){ f.properties.created_at = t.data.created_at; f.properties.completed_at = t.data.completed_at; }
+  return f;
+}
+async function loadPoints(f, id){
+  const r = await sb.rpc('get_area_points', {p_id: id});
+  if(!r.error) return r.data;
+  if(r.error.code !== NOFN) throw new Error(r.error.message);
+  const ring = f.geometry.coordinates[0], xs = ring.map(c => c[0]), ys = ring.map(c => c[1]);
+  const g = await sb.rpc('get_points', {w:Math.min(...xs), s:Math.min(...ys), e:Math.max(...xs), n:Math.max(...ys), lim:5000});
+  if(g.error) throw new Error(g.error.message);
+  return {type:'FeatureCollection', features:g.data.features.filter(ft => inRing(ft.geometry.coordinates[0], ft.geometry.coordinates[1], ring))};
+}
+const TIPE = ['PT1','PT2','PT3','PT4'], TOPO = ['Normal','ODC Less','Mitratel'];
+// Modal HTML untuk form (Upload Desain, Submit DSI)
+let fmSave = null;
+function openForm(title, sub, body, okLabel, onSave, opts = {}){
+  $('fmC').style.display = opts.noCancel ? 'none' : '';
+  document.querySelector('#fm .fb').classList.toggle('wide', !!opts.wide);
+  $('fmT').textContent = title; $('fmS').textContent = sub; $('fmB').innerHTML = body; $('fmOk').textContent = okLabel;
+  fmSave = onSave; $('fm').style.display = 'flex';
+  const f = $('fmB').querySelector('input,select'); if(f) f.focus();
+}
+function closeForm(){ $('fm').style.display = 'none'; fmSave = null; }
+$('fmC').onclick = closeForm;
+$('fmOk').onclick = async () => { if(!fmSave) return; $('fmOk').disabled = true; try{ await fmSave(); } finally{ $('fmOk').disabled = false; } };
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && fmSave) closeForm(); });
+// ---- Informasi BoQ: TOTAL ODP / OTB / PORT = kolom G x nilai DESIGNATOR; NILAI MATERIAL / JASA / TOTAL dari kolom G ----
+const DESIG = {   // DESIGNATOR -> [PORT, ODP, OTB]
+  'PS-1-16-ODP':[16,0,0], 'PS-1-16-ODP-S':[16,0,0], 'PS-1-8-ODP':[8,0,0],
+  'M-PS-1-16-ODP':[16,0,0], 'M-PS-1-16-ODP-S':[16,0,0], 'M-PS-1-8-ODP':[8,0,0],
+  'ODP-SOLID-PB-16':[16,1,0], 'ODP-SOLID-PB-16-AS':[16,1,0], 'ODP-SOLID-PB-8':[8,1,0], 'ODP-SOLID-PB-8-AS':[8,1,0],
+  'ODP-SOLID-PB-TANPA-PASSIVE-SPITTER':[0,1,0], 'ODP-SOLID-PB-TANPA-PASSIVE-SPLITTER':[0,1,0],
+  'ODP-SOLID-PL-16':[0,1,0], 'ODP-SOLID-PL-8':[0,1,0],
+  'M-TC-SM-12':[0,0,1], 'TC-SM-12':[0,0,1]
+};
+const VAL_COL = 6;   // kolom G
+const normTxt = v => String(v ?? '').toUpperCase().replace(/\s+/g, ' ').trim();
+const normLabel = v => normTxt(v).replace(/\s*:+\s*$/, '');
+function numVal(v){
+  if(typeof v === 'number') return isFinite(v) ? v : null;
+  let s = String(v ?? '').replace(/rp|idr/ig, '').replace(/\s/g, '');
+  if(!s) return null;
+  if(/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, '').replace(',', '.');   // 1.234.567,89
+  else if(/^-?\d+,\d+$/.test(s)) s = s.replace(',', '.');                                  // 12,5
+  else s = s.replace(/,/g, '');                                                           // 1,234 atau 1234.5
+  const n = Number(s); return isFinite(n) ? n : null;
+}
+const desigKey = c => { const t = normTxt(c); if(DESIG[t]) return t; const u = t.replace(/ /g, '-'); return DESIG[u] ? u : null; };
+// sheets: [{name, rows:[[cell,...],...]}]
+function analyzeBoq(sheets){
+  const scored = sheets.map(sh => ({sh, n:sh.rows.reduce((a, r) => a + (r.some(c => desigKey(c)) ? 1 : 0), 0)}));
+  scored.sort((a, b) => b.n - a.n);                                   // sheet dengan DESIGNATOR terbanyak = sheet utama
+  const main = scored[0].sh, order = [main, ...sheets.filter(s => s !== main)];
+  const lines = {}; let odp = 0, otb = 0, port = 0, matched = 0, noQty = 0;
+  main.rows.forEach((r, ri) => {
+    const ci = r.findIndex((c, i) => i !== VAL_COL && desigKey(c)); if(ci < 0) return;
+    const k = desigKey(r[ci]);
+    let q = numVal(r[VAL_COL]);                                       // nilai kolom G x nilai DESIGNATOR (PORT / ODP / OTB)
+    if(q === null){ q = 0; noQty++; }
+    const [pp, oo, bb] = DESIG[k];
+    const L = lines[k] || (lines[k] = {k, q:0, port:0, odp:0, otb:0, rows:[]});
+    L.q += q; L.port += q * pp; L.odp += q * oo; L.otb += q * bb; L.rows.push(ri + 1);
+    port += q * pp; odp += q * oo; otb += q * bb; matched++;
+  });
+  // Baris nilai: label MATERIAL / JASA / TOTAL, angkanya di kolom G. Ambil kemunculan terakhir.
+  const RX = {
+    material: /^((NILAI|TOTAL|SUB ?TOTAL|JUMLAH) )*MATERIAL$/,
+    jasa:     /^((NILAI|TOTAL|SUB ?TOTAL|JUMLAH) )*JASA$/,
+    total:    /^((NILAI|GRAND|JUMLAH) )*TOTAL( HARGA| BIAYA)?$/
+  };
+  const vals = {}, src = {};
+  for(const sh of order){
+    sh.rows.forEach((r, ri) => {
+      for(let ci = 0; ci < Math.min(r.length, VAL_COL); ci++){
+        const t = normLabel(r[ci]); if(!t) continue;
+        for(const [name, rx] of Object.entries(RX)){
+          if(!rx.test(t)) continue;
+          const n = numVal(r[VAL_COL]); if(n === null) continue;
+          if(!(name in vals) || src[name].sheet === sh.name){ vals[name] = n; src[name] = {sheet:sh.name, row:ri + 1, label:t}; }
+        }
+      }
+    });
+  }
+  return {sheet:main.name, odp, otb, port, matched, noQty, lines:Object.values(lines),
+          material:vals.material ?? null, jasa:vals.jasa ?? null, total:vals.total ?? null, src};
+}
+const rp = n => (n === null || n === undefined) ? '-' : 'Rp ' + Math.round(n).toLocaleString('id-ID');
+const cnt = n => Number(n).toLocaleString('id-ID');
+function renderBoq(a){
+  [['tOdp', a.odp], ['tOtb', a.otb], ['tPort', a.port]].forEach(([id, v]) => { if($(id)) $(id).textContent = cnt(v); });   // tampil di Informasi Desain
+  const capex = a.port > 0 && a.total !== null ? a.total / a.port : null;
+  const row = (l, v) => `<tr><td>${l}</td><td>${v}</td></tr>`, gap = '<tr class="gap"><td colspan="2"></td></tr>';
+  const srcs = ['material', 'jasa', 'total'].filter(k => a.src[k]).map(k => `${k.toUpperCase()} baris ${a.src[k].row}`).join(', ');
+  const notes = [];
+  if(!a.matched) notes.push('Tidak ada DESIGNATOR yang dikenali di BoQ, jadi total ODP, OTB, dan PORT bernilai 0.');
+  if(a.noQty) notes.push(`${a.noQty} baris DESIGNATOR punya nilai kolom G yang kosong atau bukan angka, dihitung 0.`);
+  ['material', 'jasa', 'total'].filter(k => a[k] === null).forEach(k => notes.push(`Baris ${k.toUpperCase()} (kolom G) tidak ditemukan.`));
+  $('boqInfo').className = '';
+  $('boqInfo').innerHTML = `<table class="bq">
+      ${row('NILAI MATERIAL', rp(a.material))}${row('NILAI JASA', rp(a.jasa))}${row('NILAI TOTAL', rp(a.total))}${gap}
+      ${row('CAPEX PER PORT', rp(capex))}</table>
+    <small class="mute" style="margin-top:6px">TOTAL ODP / OTB / PORT (di Informasi Desain) = jumlah (nilai kolom G × nilai DESIGNATOR). CAPEX PER PORT = NILAI TOTAL ÷ TOTAL PORT. Sheet: ${esc(a.sheet)}${srcs ? '. Nilai dari kolom G, ' + esc(srcs) : ''}.</small>
+    ${notes.map(n => `<small style="color:#b45309;margin-top:4px">${esc(n)}</small>`).join('')}
+    <details><summary>Rincian DESIGNATOR (${a.lines.length} jenis)</summary><div class="tw"><table>
+      <tr><th>Designator</th><th>Kolom G</th><th>Port</th><th>ODP</th><th>OTB</th></tr>
+      ${a.lines.map(l => `<tr><td>${esc(l.k)}</td><td>${cnt(l.q)}</td><td>${cnt(l.port)}</td><td>${cnt(l.odp)}</td><td>${cnt(l.otb)}</td></tr>`).join('') || '<tr><td colspan="5">-</td></tr>'}
+    </table></div></details>`;
+}
+const kvId = (l, id, hasBoq, full) => `<div${full ? ' class="full"' : ''}><small>${l}</small><div id="${id}">${hasBoq ? 'Memuat...' : '-'}</div></div>`;
+// ---- Log Order: riwayat status, tanggal, dan durasi antar status ----
+const LEGACY = {designed:'design_complete', completed:'dsi_complete'};    // kode status pada log lama
+function logCode(v){
+  if(SL[v]) return v;
+  const byLabel = Object.keys(SL).find(k => SL[k] === v); if(byLabel) return byLabel;
+  return LEGACY[v] || null;
+}
+function durTxt(ms){
+  const m = Math.floor(Math.max(0, ms) / 60000), d = Math.floor(m / 1440), h = Math.floor(m % 1440 / 60), n = m % 60;
+  const t = [d ? d + ' hari' : '', h ? h + ' jam' : '', n ? n + ' menit' : ''].filter(Boolean).join(' ');
+  return t || '< 1 menit';
+}
+async function openLog(){
+  openForm('Log Order', 'Riwayat status order. Durasi dihitung dari status sebelumnya.', '<div class="full mute">Memuat...</div>', 'Tutup', async () => closeForm(), {wide:true, noCancel:true});
+  const {data, error} = await sb.from('area_log').select('status,at').eq('area_id', areaId).order('at', {ascending:true});
+  if(!fmSave) return;                                    // modal sudah ditutup saat memuat
+  if(error){ $('fmB').innerHTML = `<div class="full">${esc(error.message)}</div>`; return; }
+  if(!data.length){ $('fmB').innerHTML = '<div class="full mute">Belum ada riwayat status.</div>'; return; }
+  const rows = data.map(r => ({code:logCode(r.status), raw:r.status, at:new Date(r.at)}));
+  const first = rows[0], last = rows[rows.length - 1], done = last.code === 'dsi_complete';
+  const LOG_PER = 10, pages = Math.ceil(rows.length / LOG_PER); let lp = 1;
+  const summary = `${done ? 'Total sampai DSI Complete' : 'Total sejak status pertama (masih berjalan)'}: <b>${durTxt((done ? last.at : new Date()) - first.at)}</b>${done ? '' : `<br>Di status terakhir sejak ${esc(fmt(last.at))}: <b>${durTxt(new Date() - last.at)}</b>`}`;
+  const draw = () => {
+    const from = (lp - 1) * LOG_PER;
+    const body = rows.slice(from, from + LOG_PER).map((r, j) => { const i = from + j;
+      return `<tr><td>${esc(fmt(r.at))}</td><td>${r.code ? badge(r.code) : esc(r.raw)}</td><td>${i ? durTxt(r.at - rows[i - 1].at) : '-'}</td></tr>`; }).join('');
+    $('fmB').innerHTML = `<div class="full"><table class="lgt"><tr><th>Tanggal</th><th>Status Order</th><th>Durasi</th></tr>${body}</table></div>
+      <div class="full lgp">${pages > 1
+        ? `<button id="lgPrev" type="button"${lp <= 1 ? ' disabled' : ''}>&lsaquo; Sebelumnya</button><span>Hal ${lp} / ${pages} · ${rows.length} entri</span><button id="lgNext" type="button"${lp >= pages ? ' disabled' : ''}>Berikutnya &rsaquo;</button>`
+        : `<span>${rows.length} entri</span>`}</div>
+      <div class="full mute" style="font-size:12px">${summary}</div>`;
+    if(pages > 1){ $('lgPrev').onclick = () => { lp--; draw(); }; $('lgNext').onclick = () => { lp++; draw(); }; }
+  };
+  draw();
+}
+function pointInfo(q, y, x){
+  const net = q.kind !== 'customer', row = (l, v) => `<tr><td style="color:#5b706d;padding-right:8px;white-space:nowrap">${l}</td><td>${v}</td></tr>`;
+  let r = row(net ? LABEL[q.kind] + ' ID' : 'UN ID', esc(q.un_id || '-'));
+  if(net) r += row(LABEL[q.kind] + ' Name', esc(q.name || LABEL[q.kind])) + row('Keterangan', esc(q.note || '-'));
+  else if(q.name) r += row('Nama', esc(q.name));
+  r += row('Latitude', y.toFixed(6)) + row('Longitude', x.toFixed(6));
+  if(net) r += row('Alamat', q.address ? esc(q.address) : '-');
+  return `<b>${LABEL[q.kind]}</b><table style="border-collapse:collapse;font-size:12px;margin-top:4px">${r}</table>`;
+}
+function makeMap(){
+  const map = L.map('map', {preferCanvas:true}).setView([-2.5, 118], 5);
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'&copy; OpenStreetMap'}).addTo(map);
+  const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:19, attribution:'Esri'});
+  L.control.layers({Peta:osm, Satelit:sat}, null, {position:'topright'}).addTo(map);
+  return map;
+}
+const kv = (l, v, full) => `<div${full?' class="full"':''}><small>${l}</small><div>${nz(v) ? esc(v) : '<span class="mute">-</span>'}</div></div>`;
+
+(async () => {
+  const role = await initPage('design'); if(!role) return;
+  const flash = sessionStorage.getItem('flash'); if(flash){ toast(flash); sessionStorage.removeItem('flash'); }
+  if(!areaId){ location.href = 'table.html'; return; }
+  let f, ptsData;
+  try{
+    f = await loadArea(areaId);
+    if(!f) throw new Error('Polygon tidak ditemukan atau Anda tidak punya akses');
+    ptsData = await loadPoints(f, areaId);
+  }catch(err){ $('side').innerHTML = `<div class="card">${esc(err.message)}</div>`; return toast(err.message); }
+  const p = f.properties, s = p.sto || {};
+  if(compat) toast('Mode kompatibel: jalankan 005_pages.sql agar lebih cepat');
+  document.title = `${p.code} - View Design`;
+
+  // ---- Peta ----
+  const map = makeMap();
+  const polyL = L.geoJSON(f, {style:{color:areaColor(p), weight:3, fillColor:'#f5e61a', fillOpacity:.25}}).addTo(map);
+  const bounds = polyL.getBounds(); map.fitBounds(bounds, {padding:[30,30]});
+  const zc = L.control({position:'topleft'});
+  zc.onAdd = () => {
+    const d = L.DomUtil.create('div', 'leaflet-bar'), a = L.DomUtil.create('a', '', d);
+    a.href = '#'; a.title = 'Zoom ke polygon'; a.setAttribute('role', 'button'); a.setAttribute('aria-label', 'Zoom ke polygon');
+    a.innerHTML = '&#8982;'; a.style.cssText = 'font-size:18px;line-height:30px;text-align:center;cursor:pointer';
+    L.DomEvent.on(a, 'click', e => { L.DomEvent.stop(e); map.fitBounds(polyL.getBounds(), {padding:[30,30]}); });
+    return d;
+  };
+  zc.addTo(map);
+
+  const groups = {customer:L.layerGroup(), odp:L.layerGroup(), prospect:L.layerGroup()}, cnt = {customer:0, odp:0, prospect:0};
+  (ptsData.features || []).forEach(ft => {
+    const q = ft.properties, [x, y] = ft.geometry.coordinates; cnt[q.kind]++;
+    L.circleMarker([y, x], {radius:q.kind==='customer'?4:7, color:'#fff', weight:1, fillColor:COL[q.kind], fillOpacity:.95})
+      .bindPopup(pointInfo(q, y, x)).addTo(groups[q.kind]);
+    groups[q.kind].addTo(map);
+  });
+
+  // ---- KML desain ----
+  const kml = {Point:L.layerGroup(), LineString:L.layerGroup(), Polygon:L.layerGroup()}, kc = {Point:0, LineString:0, Polygon:0}, items = [];
+  let kmlMsg = p.kml_path ? '' : 'Desain belum diupload.';
+  if(p.kml_path){
+    const {data, error} = await sb.storage.from('designs').download(p.kml_path);
+    try{
+      if(error) throw new Error(error.message);
+      const gj = parseKml(await data.text());
+      gj.features.forEach(ft => {
+        const t = ft.geometry.type, name = ft.properties.name || '(tanpa nama)';
+        const l = L.geoJSON(ft, {
+          style:() => ({color:KS[t].c, weight:t==='Polygon'?2:3, fillOpacity:.1}),
+          pointToLayer:(g, ll) => L.circleMarker(ll, {radius:5, color:'#fff', weight:1, fillColor:KS.Point.c, fillOpacity:1})
+        });
+        const inner = l.getLayers()[0];
+        inner.bindPopup(`<b>${esc(name)}</b>${ft.properties.desc ? '<br>' + esc(ft.properties.desc.slice(0, 300)) : ''}`);
+        kml[t].addLayer(l); kc[t]++; items.push({name, t, l:inner});
+      });
+      Object.values(kml).forEach(g => { g.addTo(map); g.eachLayer(l => bounds.extend(l.getBounds())); });
+      map.fitBounds(bounds, {padding:[30,30]});
+    }catch(err){ kmlMsg = 'Gagal memuat KML: ' + err.message; toast(kmlMsg, 'error'); }
+  }
+
+  // ---- Legend (centang untuk tampil/sembunyi) ----
+  const leg = (layer, color, label, n) => {
+    const id = 'lg' + Math.random().toString(36).slice(2, 7);
+    setTimeout(() => $(id).onchange = e => e.target.checked ? map.addLayer(layer) : map.removeLayer(layer));
+    return `<label><input type="checkbox" id="${id}" checked><span class="dot" style="background:${color}"></span>${label}<span class="n">${n}</span></label>`;
+  };
+  $('leg').innerHTML = '<h4>Titik dalam polygon</h4>' +
+    Object.keys(groups).map(k => leg(groups[k], COL[k], LABEL[k], cnt[k])).join('') +
+    '<h4>Objek desain (KML)</h4>' +
+    (p.kml_path ? Object.keys(kml).map(t => leg(kml[t], KS[t].c, KS[t].n, kc[t])).join('') : '<span class="mute">Belum ada KML</span>');
+
+  // ---- Panel detail: Status Order, Informasi Polygon, Informasi Desain, Wilayah Telkom, Informasi BoQ ----
+  const isDes = role === 'designer' || role === 'admin', isPlan = role === 'planner' || role === 'admin';
+  const fileName = path => path ? path.split('/').pop().replace(/^\d+_/, '') : '';
+  $('side').innerHTML = `
+    <h2 class="ptl">View Design</h2>
+    <div class="stbanner" id="statCard">
+      <span class="ico"><svg width="26" height="12" viewBox="0 0 34 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><line x1="1" y1="8" x2="8" y2="8"/><circle cx="17" cy="8" r="5"/><circle cx="17" cy="8" r="1.6" fill="currentColor" stroke="none"/><line x1="26" y1="8" x2="33" y2="8"/></svg></span>
+      <div><small>Status Order</small><div class="stv" id="stat"></div></div></div>
+    <div class="card"><h3>Informasi Polygon</h3><div class="kv">
+      ${kv('ID Polygon', p.code)}${kv('Nama Polygon', p.name)}
+      ${kv('Total Pelanggan', p.customer)}${kv('Total Demand', p.prospect)}</div></div>
+    <div class="card"><h3>Informasi Desain</h3><div class="kv">
+      ${kv('Nama Proyek', p.nama_proyek, 1)}${kv('Tipe Design', p.tipe_design)}${kv('Topology', p.topology)}
+      ${kv('ID IHLD', p.ihld_id)}${kv('DSI ID', p.dsi_id)}${kv('DSI Name', p.dsi_name, 1)}
+      ${kvId('TOTAL ODP', 'tOdp', p.boq_path)}${kvId('TOTAL OTB', 'tOtb', p.boq_path)}${kvId('TOTAL PORT', 'tPort', p.boq_path)}</div></div>
+    <div class="card"><h3>Wilayah Telkom</h3><div class="cols">
+      <div class="col">${kv('STO', p.sto_code)}${kv('Nama STO', s.nama_sto)}${kv('Area', s.area)}${kv('Regional', s.regional)}${kv('Branch', s.branch)}</div>
+      <div class="col">${kv('Cluster', s.cluster)}${kv('WOK', s.wok)}${kv('District', s.district)}${kv('Sub District', s.sub_district)}${kv('Kabupaten/Kota', s.kabupaten_kota)}</div></div></div>
+    <div class="card" id="boqCard"><h3>Informasi BoQ</h3>
+      <div id="boqInfo" class="mute">${p.boq_path ? 'Memuat BoQ...' : 'Belum ada BoQ. Tekan Upload Design untuk mengupload.'}</div></div>`;
+
+  // ---- Status + tombol bawah ----
+  const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  function renderStatus(){                                // banner: bingkai, gradasi, dan bayangan tebal (efek 3D)
+    const c = areaColor(p), [r, g, b] = rgb(c), rgba = a => `rgba(${r},${g},${b},${a})`, el = $('statCard');
+    el.style.background = `linear-gradient(180deg, ${rgba(.10)}, ${rgba(.24)})`;
+    el.style.borderColor = rgba(.5);
+    el.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,.75), 0 3px 0 ${rgba(.4)}, 0 8px 16px ${rgba(.25)}`;
+    el.style.color = `rgb(${[r, g, b].map(v => Math.round(v * 0.6)).join(',')})`;
+    $('stat').textContent = SL[p.status] || p.status;
+    polyL.setStyle({color:c});
+  }
+  function renderFoot(){
+    const noK = !p.kml_path, noB = !p.boq_path;
+    const startWhy = !isDes ? 'Hanya designer' : !canUpload(p) ? 'DSI Complete, polygon terkunci' : '';
+    const dsiWhy = !isPlan ? 'Hanya planner' : p.status === 'dsi_complete' ? 'DSI sudah Complete' : !canDsi(p) ? 'Menunggu Design Complete' : '';
+    $('foot').innerHTML = `
+      <button id="bDlK" type="button" ${noK ? 'disabled title="Belum ada KML"' : ''}>Download KML</button>
+      <button id="bDlB" type="button" ${noB ? 'disabled title="Belum ada BoQ"' : ''}>Download BoQ</button>
+      <button id="bStart" type="button" class="pri" ${startWhy ? `disabled title="${startWhy}"` : ''}>Upload Design</button>
+      <button id="bDsi" type="button" class="pri" ${dsiWhy ? `disabled title="${dsiWhy}"` : ''}>Submit DSI</button>
+      <button id="bLog" type="button" class="full">Log Order</button>`;
+    $('bDlK').onclick = () => dlFile(p.kml_path);
+    $('bDlB').onclick = () => dlFile(p.boq_path);
+    $('bStart').onclick = startDesign;
+    $('bDsi').onclick = drawingDsi;
+    $('bLog').onclick = openLog;
+  }
+  const refresh = () => { renderStatus(); renderFoot(); };
+  refresh();
+
+  // Upload Design: status -> Ongoing Design (bila masih Submitted/Revision), lalu form upload tampil
+  async function startDesign(){
+    if(canStartDesign(p)){
+      const {error} = await sb.rpc('start_design', {p_area:areaId});
+      if(error) return toast(error.message, 'error');
+      p.status = 'ongoing_design'; refresh();
+    }
+    openUploadForm();
+  }
+  // Submit DSI: status -> Ongoing DSI (bila masih Design Complete), lalu form submit DSI tampil
+  async function drawingDsi(){
+    if(p.status === 'design_complete'){
+      const {error} = await sb.rpc('start_dsi', {p_area:areaId});
+      if(error) return toast(error.message, 'error');
+      p.status = 'ongoing_dsi'; refresh();
+    }
+    openDsiForm();
+  }
+
+  function openUploadForm(){
+    const opt = (arr, cur, ph) => `<option value="">${ph}</option>` + arr.map(v => `<option${v === cur ? ' selected' : ''}>${v}</option>`).join('');
+    openForm('Form Upload Desain', 'Isian bertanda * wajib. Setelah berhasil, status menjadi Design Complete.',
+      `<div><label for="uIhld">ID IHLD (opsional)</label><input id="uIhld" maxlength="60" value="${esc(p.ihld_id || '')}"></div>
+       <div><label for="uProyek">Nama Proyek *</label><input id="uProyek" maxlength="120" value="${esc(p.nama_proyek || '')}"></div>
+       <div><label for="uTipe">Tipe Design *</label><select id="uTipe">${opt(TIPE, p.tipe_design, 'Pilih tipe')}</select></div>
+       <div><label for="uTopo">Topology *</label><select id="uTopo">${opt(TOPO, p.topology, 'Pilih topology')}</select></div>
+       <div class="full"><label for="uKml">Upload KML (.kml) *</label><input id="uKml" type="file" accept=".kml"></div>
+       <div class="full"><label for="uBoq">Upload BoQ (.xlsx) *</label><input id="uBoq" type="file" accept=".xlsx"></div>`,
+      'Upload', async () => {
+        const ihld = $('uIhld').value.trim(), proyek = $('uProyek').value.trim(), tipe = $('uTipe').value, topo = $('uTopo').value;
+        const k = $('uKml').files[0], b = $('uBoq').files[0];
+        if(!proyek) return toast('Nama Proyek wajib diisi');
+        if(!tipe) return toast('Tipe Design wajib dipilih');
+        if(!topo) return toast('Topology wajib dipilih');
+        if(!k || !b) return toast('Pilih file KML dan BoQ');
+        if(!/\.kml$/i.test(k.name) || !/\.xlsx$/i.test(b.name)) return toast('Format harus .kml dan .xlsx');
+        try{
+          parseKml(await k.text());                         // validasi KML sebelum upload
+          const t = Date.now(), safe = n => n.replace(/[^A-Za-z0-9._-]/g, '_');
+          const kp = `${areaId}/${t}_${safe(k.name)}`, bp = `${areaId}/${t}_${safe(b.name)}`, st = sb.storage.from('designs');
+          let r = await st.upload(kp, k, {contentType:'application/vnd.google-earth.kml+xml'}); if(r.error) throw new Error(r.error.message);
+          r = await st.upload(bp, b); if(r.error) throw new Error(r.error.message);
+          const {error} = await sb.rpc('mark_designed', {p_area:areaId, p_kml:kp, p_boq:bp, p_ihld:ihld || null, p_proyek:proyek, p_tipe:tipe, p_topology:topo});
+          if(error) throw new Error(error.message);
+          sessionStorage.setItem('flash', 'Desain terupload. Status: Design Complete'); location.reload();
+        }catch(err){ toast(err.message, 'error'); }
+      });
+  }
+  function openDsiForm(){
+    openForm('Form Submit DSI', 'Setelah submit, status menjadi DSI Complete dan polygon terkunci.',
+      `<div><label for="dId">DSI ID *</label><input id="dId" maxlength="40" value="${esc(p.dsi_id || '')}"></div>
+       <div><label for="dNm">DSI Name *</label><input id="dNm" maxlength="120" value="${esc(p.dsi_name || '')}"></div>`,
+      'Submit', async () => {
+        const id = $('dId').value.trim(), nm = $('dNm').value.trim();
+        if(!id || !nm) return toast('DSI ID dan DSI Name wajib diisi');
+        const {error} = await sb.rpc('complete_area', {p_area:areaId, p_dsi_id:id, p_dsi_name:nm});
+        if(error) return toast(error.message, 'error');
+        sessionStorage.setItem('flash', 'Status: DSI Complete'); location.reload();
+      });
+  }
+
+  // Informasi BoQ: unduh file, hitung DESIGNATOR dan baca nilai kolom G
+  (async () => {
+    if(!p.boq_path) return;
+    const {data, error} = await sb.storage.from('designs').download(p.boq_path);
+    const noTot = () => ['tOdp', 'tOtb', 'tPort'].forEach(id => { if($(id)) $(id).textContent = '-'; });
+    if(error){ $('boqInfo').textContent = error.message; noTot(); return; }
+    try{
+      const wb = XLSX.read(new Uint8Array(await data.arrayBuffer()), {type:'array'});
+      const sheets = wb.SheetNames.map(n => ({name:n, rows:XLSX.utils.sheet_to_json(wb.Sheets[n], {header:1, defval:'', raw:true}).slice(0, 5000)}));
+      renderBoq(analyzeBoq(sheets));
+    }catch(err){ $('boqInfo').textContent = 'Gagal membaca BoQ: ' + err.message; noTot(); }
+  })();
+})().catch(err => {            // jangan biarkan halaman kosong tanpa pesan
+  console.error(err);
+  const hint = err instanceof ReferenceError ? '<br><small class="mute">Biasanya common.js belum versi terbaru. Unggah common.js terbaru lalu tekan Ctrl+F5.</small>' : '';
+  $('side').innerHTML = `<div class="card"><b>Terjadi error</b><br>${esc(err.message)}${hint}</div>`;
+  if($('leg')) $('leg').style.display = 'none';
+  toast(err.message);
+});
+</script>
+</body>
+</html>

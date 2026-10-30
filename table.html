@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>List Polygon - DIGIMON GIS</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css?v=7">
+<style>
+main{padding:16px;max-width:1600px;margin:0 auto}
+.ptitle{margin:0 0 12px;font-size:18px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.grid4 label,.srch label{display:block;font-size:12px;color:var(--mute);margin-bottom:3px}
+.grid4 select,.srch select,.srch input{width:100%}
+.srch{display:grid;grid-template-columns:260px 1fr;gap:10px;margin:12px 0}
+.acts{display:flex;gap:8px;align-items:center;margin-top:12px}
+.acts .sp{flex:1}
+.tw{overflow:auto;max-height:68vh}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th{position:sticky;top:0;background:#fff;text-align:left;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--mute);padding:10px 8px;border-bottom:2px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none}
+td{padding:9px 8px;border-bottom:1px solid #e9eeeb;vertical-align:top}
+tbody tr:hover td{background:#f7faf8}
+.pg{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:10px}
+@media(max-width:900px){.grid4{grid-template-columns:1fr 1fr}.srch{grid-template-columns:1fr}}
+/* ---- Tampilan compact ---- */
+main{padding:10px 12px}
+.ptitle{margin:0 0 8px;font-size:16px}
+.card{padding:10px;margin-bottom:8px}
+.grid4{gap:8px}.grid4 label,.srch label{font-size:11px;margin-bottom:2px}
+.srch{margin:8px 0;gap:8px}
+.acts{margin-top:8px}
+th{padding:7px 8px}td{padding:6px 8px}
+.pg{margin-top:6px}
+.tw{max-height:72vh}
+/* ---- Dashboard ---- */
+.badges{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:8px}
+.bdg{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:7px 10px;border-radius:10px;border:1px solid var(--line);border-left:4px solid var(--c);background:#fff;cursor:pointer}
+.bdg small{font-size:11px;color:var(--mute);white-space:nowrap}
+.bdg b{font-size:20px;line-height:1.1;color:var(--c)}
+.bdg.on{background:rgba(var(--rgb),.12);box-shadow:inset 0 0 0 2px var(--c)}
+.drow{display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:8px}
+.drow3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
+.dc h3{margin:0 0 6px;font-size:12px;color:var(--acc)}
+.ch{position:relative;height:210px}.ch.s{height:150px}
+.trhead{display:flex;align-items:center;justify-content:space-between;margin:2px 0 6px;font-size:12px;color:var(--mute)}
+.trhead h3{margin:0;font-size:12px}
+@media(max-width:900px){.badges{grid-template-columns:repeat(2,1fr)}.drow,.drow3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="hdr"></div>
+<main>
+  <h2 class="ptitle">List Polygon</h2>
+  <section class="card">
+    <div class="grid4">
+      <div><label for="fReg">Regional</label><select id="fReg"></select></div>
+      <div><label for="fBranch">Branch</label><select id="fBranch"></select></div>
+      <div><label for="fDist">District</label><select id="fDist"></select></div>
+      <div><label for="fSto">STO</label><select id="fSto"></select></div>
+    </div>
+    <div class="srch">
+      <div><label for="sCol">Cari di kolom</label><select id="sCol"></select></div>
+      <div><label for="sQ">Pencarian</label><input id="sQ" type="search" placeholder="Ketik kata kunci, tekan Enter"></div>
+    </div>
+    <div class="grid4">
+      <div><label for="fTipe">Tipe Desain</label><select id="fTipe"></select></div>
+      <div><label for="fKab">Kabupaten/Kota</label><select id="fKab"></select></div>
+      <div><label for="fStatus">Status Order</label><select id="fStatus"></select></div>
+      <div><label for="fTahun">Tahun</label><select id="fTahun"></select></div>
+    </div>
+    <div class="acts">
+      <button id="apply" type="button" class="pri">Terapkan Filter</button>
+      <button id="reset" type="button">Reset</button>
+      <span class="sp"></span>
+      <span id="cnt" class="mute"></span>
+      <button id="csv" type="button">Unduh CSV</button>
+    </div>
+  </section>
+  <section class="dash">
+    <div class="mute" style="font-size:11px;margin-bottom:6px">Dashboard mengikuti filter di atas. Klik badge status untuk memfilter tabel.</div>
+    <div class="badges" id="badges"></div>
+    <div class="drow">
+      <div class="card dc"><h3>Status Order</h3><div class="ch"><canvas id="chStatus"></canvas></div></div>
+      <div class="card dc"><h3>Total Order per District</h3><div class="ch" id="chDistBox"><canvas id="chDist"></canvas></div></div>
+    </div>
+    <div class="trhead"><h3>Tren Tanggal</h3><label>Per <select id="trMode"><option value="auto">Otomatis</option><option value="day">Hari</option><option value="week">Minggu</option><option value="month">Bulan</option></select></label></div>
+    <div class="drow3">
+      <div class="card dc"><h3>Submitted Polygon <span id="trN1"></span></h3><div class="ch s"><canvas id="chT1"></canvas></div></div>
+      <div class="card dc"><h3>Design Complete <span id="trN2"></span></h3><div class="ch s"><canvas id="chT2"></canvas></div></div>
+      <div class="card dc"><h3>DSI Complete <span id="trN3"></span></h3><div class="ch s"><canvas id="chT3"></canvas></div></div>
+    </div>
+  </section>
+  <section class="card">
+    <div class="tw"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    <div class="pg"><button id="prev" type="button">Sebelumnya</button><span id="pgi" class="mute"></span><button id="next" type="button">Berikutnya</button></div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="common.js?v=7"></script>
+<script>
+const PER = 25;
+// Pakai list_areas (005); jika belum terpasang, susun dari get_areas + tabel project_areas
+async function loadRows(){
+  const r = await sb.rpc('list_areas');
+  if(!r.error) return r.data;
+  if(r.error.code !== 'PGRST202') throw new Error(r.error.message);
+  toast('Mode kompatibel: jalankan 005_pages.sql agar lebih cepat');
+  const [g, t] = await Promise.all([sb.rpc('get_areas'),
+    sb.from('project_areas').select('id,created_at,updated_at,completed_at').range(0, 4999)]);
+  if(g.error) throw new Error(g.error.message);
+  if(t.error) throw new Error(t.error.message);
+  const m = new Map(t.data.map(x => [x.id, x]));
+  return g.data.features.map(f => {
+    const p = f.properties, s = p.sto || {}, x = m.get(p.id) || {};
+    return {id:p.id, code:p.code, name:p.name, status:p.status,
+      sto_code:p.sto_code, nama_sto:s.nama_sto, area:s.area, regional:s.regional, branch:s.branch, cluster:s.cluster, wok:s.wok,
+      district:s.district, sub_district:s.sub_district, kabupaten_kota:s.kabupaten_kota,
+      ihld_id:p.ihld_id, nama_proyek:p.nama_proyek, tipe_design:p.tipe_design, kml_path:p.kml_path, boq_path:p.boq_path,
+      designed_at:p.designed_at, dsi_id:p.dsi_id, dsi_name:p.dsi_name, completed_at:x.completed_at,
+      created_at:x.created_at, updated_at:x.updated_at, customer:p.customer, odp:p.odp, prospect:p.prospect};
+  }).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+}
+let ALL = [], VIEW = [], sortKey = 'created_at', sortDir = -1, page = 1;
+// [kunci, judul, (opsional) render kustom]
+const COLS = [
+  ['status','Status Order', r => badge(r.status)],
+  ['code','Polygon ID'], ['name','Nama Polygon'], ['nama_proyek','Nama Proyek'],
+  ['tipe_design','Tipe Desain'], ['topology','Topology'], ['ihld_id','ID IHLD'], ['sto_code','STO'],
+  ['branch','Branch'], ['district','District'], ['kabupaten_kota','Kab/Kota'],
+  ['customer','Pelanggan'], ['odp','ODP'], ['dsi_id','DSI ID'],
+  ['created_at','Disubmit', r => `${esc(fmt(r.created_at))}<br><small class="mute">${esc(ago(r.created_at))}</small>`]
+];
+// filter dropdown: kunci data -> id elemen
+const F = {regional:'fReg', branch:'fBranch', district:'fDist', sto_code:'fSto',
+           tipe_design:'fTipe', status:'fStatus', kabupaten_kota:'fKab', year:'fTahun'};
+
+const distinct = (key, rows) => [...new Set(rows.map(r => r[key]).filter(nz))].sort((a,b) => String(a).localeCompare(String(b),'id',{numeric:true}));
+function fillSel(id, vals, label, labelOf){
+  const el = $(id), cur = el.value;
+  el.innerHTML = `<option value="">${label}</option>` + vals.map(v => `<option value="${esc(v)}">${esc(labelOf ? labelOf(v) : v)}</option>`).join('');
+  if(vals.map(String).includes(cur)) el.value = cur;
+}
+function cascade(){            // Regional -> Branch -> District -> STO saling menyaring
+  let rows = ALL;
+  for(const [k,id,l] of [['regional','fReg','Semua Regional'],['branch','fBranch','Semua Branch'],['district','fDist','Semua District'],['sto_code','fSto','Semua STO']]){
+    fillSel(id, distinct(k, rows), l);
+    const v = $(id).value; if(v) rows = rows.filter(r => String(r[k]) === v);
+  }
+}
+function matches(r, skip){                        // skip = kunci filter yang diabaikan (untuk badge status)
+  for(const [k, id] of Object.entries(F)){ if(k === skip) continue; const v = $(id).value; if(v && String(r[k] ?? '') !== v) return false; }
+  const q = $('sQ').value.trim().toLowerCase(), col = $('sCol').value;
+  if(q){
+    const hay = col === '*' ? [...COLS.map(c => r[c[0]]), r.nama_sto, r.dsi_name].join(' ') : String(r[col] ?? '');
+    if(!hay.toLowerCase().includes(q)) return false;
+  }
+  return true;
+}
+function apply(){
+  VIEW = ALL.filter(r => matches(r));
+  doSort(); page = 1; render(); renderDash();
+}
+// ---- Dashboard: badge status, chart status, total order per district, tren tanggal ----
+const MON = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const p2 = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+const parseKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d || 1); };
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(',');
+function bucketKey(d, mode){
+  if(mode === 'month') return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-01`;
+  if(mode === 'week'){ const w = new Date(d.getFullYear(), d.getMonth(), d.getDate()); w.setDate(w.getDate() - ((w.getDay() + 6) % 7)); return ymd(w); }   // awal minggu = Senin
+  return ymd(d);
+}
+function nextKey(k, mode){
+  const d = parseKey(k);
+  if(mode === 'month') d.setMonth(d.getMonth() + 1); else d.setDate(d.getDate() + (mode === 'week' ? 7 : 1));
+  return ymd(d);
+}
+function rangeKeys(a, b, mode){ const out = []; for(let k = a, n = 0; k <= b && n < 800; k = nextKey(k, mode), n++) out.push(k); return out; }
+const autoMode = days => days <= 60 ? 'day' : days <= 400 ? 'week' : 'month';
+const labelOf = (k, mode) => { const d = parseKey(k); return mode === 'month' ? `${MON[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` : `${p2(d.getDate())} ${MON[d.getMonth()]}`; };
+// Tren: Submitted Polygon = tanggal dibuat, Design Complete = tanggal desain diupload, DSI Complete = tanggal DSI diinput
+function trendData(rows, mode){
+  const fields = ['created_at', 'designed_at', 'completed_at'];
+  let min = Infinity, max = -Infinity;
+  fields.forEach(f => rows.forEach(r => { if(r[f]){ const t = new Date(r[f]).getTime(); if(t < min) min = t; if(t > max) max = t; } }));
+  if(min === Infinity) return null;
+  const m = mode === 'auto' ? autoMode(Math.ceil((max - min) / 86400000)) : mode;
+  const keys = rangeKeys(bucketKey(new Date(min), m), bucketKey(new Date(max), m), m);
+  const series = fields.map(f => {
+    const mp = new Map();
+    rows.forEach(r => { if(r[f]){ const k = bucketKey(new Date(r[f]), m); mp.set(k, (mp.get(k) || 0) + 1); } });
+    return keys.map(k => mp.get(k) || 0);
+  });
+  return {mode:m, labels:keys.map(k => labelOf(k, m)), series};
+}
+function districtData(rows){
+  const by = new Map();
+  rows.forEach(r => { const d = r.district || '(tanpa STO)'; const o = by.get(d) || {t:0}; o.t++; o[r.status] = (o[r.status] || 0) + 1; by.set(d, o); });
+  const names = [...by.keys()].sort((a, b) => by.get(b).t - by.get(a).t || a.localeCompare(b));
+  return {names, by};
+}
+const charts = {};
+function mkChart(id, cfg){
+  if(charts[id]){ charts[id].data = cfg.data; charts[id].options = cfg.options; charts[id].update(); }
+  else charts[id] = new Chart($(id), cfg);
+}
+function renderDash(){
+  const keys = Object.keys(SL), cur = $('fStatus').value;
+  // Badge: hitung dari semua filter KECUALI status, supaya bisa dipakai sebagai pilihan status
+  const base = ALL.filter(r => matches(r, 'status')), n = {}; keys.forEach(k => n[k] = 0);
+  base.forEach(r => { if(n[r.status] !== undefined) n[r.status]++; });
+  $('badges').innerHTML = [['', 'Total Order', base.length, '#0f2a2c'], ...keys.map(k => [k, SL[k], n[k], SC[k]])]
+    .map(([k, l, c, col]) => `<button type="button" class="bdg${cur === k ? ' on' : ''}" data-s="${k}" style="--c:${col};--rgb:${hexRgb(col)}"><small>${esc(l)}</small><b>${c}</b></button>`).join('');
+  $('badges').querySelectorAll('.bdg').forEach(b => b.onclick = () => { const s = b.dataset.s; $('fStatus').value = (s && s === cur) ? '' : s; apply(); });
+  if(typeof Chart === 'undefined'){ document.querySelectorAll('.ch').forEach(el => el.innerHTML = '<span class="mute">Chart.js gagal dimuat. Periksa koneksi internet.</span>'); return; }
+  const rows = VIEW, cnt = {}; keys.forEach(k => cnt[k] = 0); rows.forEach(r => { if(cnt[r.status] !== undefined) cnt[r.status]++; });
+  mkChart('chStatus', {type:'doughnut',
+    data:{labels:keys.map(k => `${SL[k]} (${cnt[k]})`), datasets:[{data:keys.map(k => cnt[k]), backgroundColor:keys.map(k => SC[k]), borderWidth:1}]},
+    options:{responsive:true, maintainAspectRatio:false, cutout:'55%', plugins:{legend:{position:'bottom', labels:{boxWidth:10, font:{size:10}}}}}});
+  const dd = districtData(rows);
+  $('chDistBox').style.height = Math.max(210, dd.names.length * 26 + 40) + 'px';
+  mkChart('chDist', {type:'bar',
+    data:{labels:dd.names.map(x => `${x} · ${dd.by.get(x).t}`),
+          datasets:keys.map(k => ({label:SL[k], backgroundColor:SC[k], data:dd.names.map(x => dd.by.get(x)[k] || 0)}))},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true, ticks:{precision:0}}, y:{stacked:true, ticks:{font:{size:11}}}},
+      plugins:{legend:{display:false}, tooltip:{mode:'index', intersect:false}}}});
+  const t = trendData(rows, $('trMode').value);
+  [['chT1','trN1',0,'#2563eb','Submitted Polygon'], ['chT2','trN2',1,'#7c3aed','Design Complete'], ['chT3','trN3',2,'#15803d','DSI Complete']].forEach(([id, nid, i, col, name]) => {
+    const total = t ? t.series[i].reduce((a, b) => a + b, 0) : 0;
+    $(nid).textContent = `· ${total}${t ? ' · per ' + ({day:'hari', week:'minggu', month:'bulan'})[t.mode] : ''}`;
+    mkChart(id, {type:'line',
+      data:{labels:t ? t.labels : [], datasets:[{label:name, data:t ? t.series[i] : [], borderColor:col, backgroundColor:col + '33', fill:true, tension:.3, pointRadius:2}]},
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+        scales:{x:{ticks:{maxTicksLimit:7, font:{size:10}}}, y:{beginAtZero:true, ticks:{precision:0, font:{size:10}}}}}});
+  });
+}
+$('trMode').onchange = renderDash;
+function doSort(){
+  VIEW.sort((a,b) => {
+    const x = a[sortKey], y = b[sortKey];
+    const c = (typeof x === 'number' && typeof y === 'number') ? x - y : String(x ?? '').localeCompare(String(y ?? ''), 'id', {numeric:true});
+    return c * sortDir;
+  });
+}
+function render(){
+  const pages = Math.max(1, Math.ceil(VIEW.length / PER)); page = Math.min(page, pages);
+  $('thead').innerHTML = '<tr>' + COLS.map(c => `<th data-k="${c[0]}">${c[1]}${sortKey===c[0] ? (sortDir>0?' ▲':' ▼') : ''}</th>`).join('') + '<th></th></tr>';
+  $('thead').querySelectorAll('th[data-k]').forEach(th => th.onclick = () => {
+    const k = th.dataset.k; sortDir = (k === sortKey) ? -sortDir : 1; sortKey = k; doSort(); render();
+  });
+  const rows = VIEW.slice((page-1)*PER, page*PER);
+  $('tbody').innerHTML = rows.map(r => '<tr>' + COLS.map(c =>
+      `<td>${c[2] ? c[2](r) : nz(r[c[0]]) ? esc(r[c[0]]) : '<span class="mute">-</span>'}</td>`).join('') +
+      `<td><a class="btn" href="design.html?id=${esc(r.id)}">Lihat</a></td></tr>`).join('')
+    || `<tr><td colspan="${COLS.length+1}" class="mute" style="padding:20px">Tidak ada data yang cocok</td></tr>`;
+  $('cnt').textContent = `${VIEW.length} dari ${ALL.length} data`;
+  $('pgi').textContent = `Hal ${page} / ${pages}`;
+  $('prev').disabled = page <= 1; $('next').disabled = page >= pages;
+}
+$('prev').onclick = () => { page--; render(); };
+$('next').onclick = () => { page++; render(); };
+$('apply').onclick = apply;
+$('sQ').addEventListener('keydown', e => { if(e.key === 'Enter') apply(); });
+['fReg','fBranch','fDist'].forEach(id => $(id).onchange = cascade);
+$('reset').onclick = () => { Object.values(F).forEach(id => $(id).value = ''); $('sQ').value = ''; $('sCol').value = '*'; cascade(); apply(); };
+$('csv').onclick = () => {
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const csv = [COLS.map(c => q(c[1])).join(','), ...VIEW.map(r => COLS.map(c => q(r[c[0]])).join(','))].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], {type:'text/csv'}));
+  a.download = 'digimon-gis-data.csv'; a.click(); URL.revokeObjectURL(a.href);
+};
+
+(async () => {
+  const role = await initPage('table'); if(!role) return;
+  let data;
+  try{ data = await loadRows(); }catch(err){ return toast(err.message); }
+  ALL = data.map(r => ({...r, year: r.created_at ? new Date(r.created_at).getFullYear() : ''}));
+  $('sCol').innerHTML = '<option value="*">Semua Kolom</option>' + COLS.map(c => `<option value="${c[0]}">${c[1]}</option>`).join('');
+  fillSel('fTipe', distinct('tipe_design', ALL), 'Semua Tipe');
+  fillSel('fStatus', Object.keys(SL), 'Semua Status', v => SL[v]);
+  fillSel('fKab', distinct('kabupaten_kota', ALL), 'Semua Kab/Kota');
+  fillSel('fTahun', distinct('year', ALL).reverse(), 'Semua Tahun');
+  cascade(); apply();
+})().catch(err => {            // jangan biarkan halaman kosong tanpa pesan
+  console.error(err);
+  const hint = err instanceof ReferenceError ? '<br><small class="mute">Biasanya common.js belum versi terbaru. Unggah common.js terbaru lalu tekan Ctrl+F5.</small>' : '';
+  $('tbody').innerHTML = `<tr><td colspan="20" style="padding:20px"><b>Terjadi error</b><br>${esc(err.message)}${hint}</td></tr>`;
+  if($('leg')) $('leg').style.display = 'none';
+  toast(err.message);
+});
+</script>
+</body>
+</html>

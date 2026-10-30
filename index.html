@@ -1,0 +1,935 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DIGIMON GIS</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0f2a2c;--side:#0f2a2c;--paper:#f2f4f1;--line:#2c4a4c;--text:#e6efec;--mute:#8fa9a6;
+--cust:#4b8f6b;--odp:#e8731a;--pros:#2563eb;--poly:#0e7c7b}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:14px}
+body{display:flex;flex-direction:column}
+#app{display:grid;grid-template-columns:300px 1fr;flex:1;min-height:0}
+.top{display:flex;align-items:center;gap:14px;background:var(--ink);color:#e6efec;padding:0 16px;height:48px;flex:none;border-bottom:1px solid #1d3d3f}
+.top nav{display:flex;gap:4px}.top nav a{color:#bcd0cc;text-decoration:none;padding:6px 12px;border-radius:8px}.top nav a.on{background:#e6efec;color:var(--ink)}
+.top .sp{flex:1}.top .sub{color:#8fa9a6;font-size:12px}.top button{padding:6px 12px}
+aside{background:var(--side);color:var(--text);padding:16px;overflow:auto;display:flex;flex-direction:column;gap:18px}
+h1{font-size:18px;margin:0;font-weight:600;letter-spacing:.2px}
+h2{font-size:13px;margin:0 0 8px;font-weight:600;color:var(--mute)}
+select,button,input{font:inherit}
+select,input{width:100%;padding:8px;border-radius:6px;border:1px solid var(--line);background:#143538;color:var(--text)}
+button{cursor:pointer;border:1px solid var(--line);background:#143538;color:var(--text);padding:8px 10px;border-radius:6px}
+button:hover{background:#1b4549}
+button.on{background:var(--text);color:var(--ink);border-color:var(--text)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #7fe0d4;outline-offset:2px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.lg{display:flex;align-items:center;gap:8px;margin:6px 0}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+#areas{display:flex;flex-direction:column;gap:6px}
+.area{padding:8px;border:1px solid var(--line);border-radius:6px;cursor:pointer}
+.area:hover{background:#143538}
+.area small{color:var(--mute);display:block;margin-top:2px}
+#hint{color:var(--mute);font-size:12px}
+#map{height:100%}
+#map.add{cursor:crosshair}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 14px;border-radius:6px;display:none;z-index:9999}
+#login{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:9998}
+#login form{width:300px;display:flex;flex-direction:column;gap:10px;color:var(--ink)}
+#login input{background:#fff;color:var(--ink);border-color:#c5cfcb}
+#login button{background:var(--ink);color:#fff}
+.pop button{margin-top:6px;padding:4px 8px;background:#fff;color:#a02020;border-color:#d8b4b4}
+.st{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;color:#fff;font-weight:500}
+.pop button.n{color:#0f2a2c;border-color:#c5cfcb;margin-right:4px}
+.pop a{color:#0e7c7b}
+.sl{display:block;font-size:12px;color:var(--mute);margin:10px 0 4px}.sl:first-of-type{margin-top:0}
+.srow{display:flex;gap:6px}.srow input{flex:1;min-width:0}.srow button{flex:none;padding:8px 12px}
+#sRes{margin-top:6px}#sRes .li{padding:7px 8px;border:1px solid var(--line);border-radius:6px;margin-top:4px;cursor:pointer;font-size:12px}#sRes .li:hover{background:#143538}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:8px;font-size:12px;color:var(--mute)}
+.pager button{padding:5px 10px;font-size:12px}.pager button:disabled{opacity:.4;cursor:not-allowed}
+#mapwrap{position:relative;height:100%;min-width:0;overflow:hidden}
+#bar{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:4px;background:rgba(15,42,44,.95);padding:6px;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.3);max-width:calc(100% - 16px);overflow-x:auto}
+#bar .grp{display:flex;align-items:center;gap:4px;padding:0 6px;border-left:1px solid var(--line)}
+#bar .grp:first-child{border-left:0}
+#bar button{background:transparent;border:0;color:var(--text);padding:8px 12px;border-radius:8px;white-space:nowrap}
+#bar button:hover:not(:disabled){background:#1b4549}
+#bar button.on{background:var(--text);color:var(--ink)}
+#bar button:disabled{opacity:.35;cursor:not-allowed}
+#bar .dot{width:10px;height:10px;margin-right:6px}
+#bar .chip{color:#7fe0d4;font-size:12px;white-space:nowrap;padding:0 4px}
+#bHint{position:absolute;left:50%;bottom:84px;transform:translateX(-50%);z-index:1000;background:#fff;color:var(--ink);padding:6px 12px;border-radius:8px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.25);display:none;max-width:calc(100% - 24px);text-align:center}
+.mdl{display:none}
+.gpop{font-family:'IBM Plex Sans',system-ui,sans-serif}
+.gpop .leaflet-popup-content-wrapper{border-radius:12px}
+.gpop .leaflet-popup-content{margin:10px 12px;font-size:12px;line-height:1.35;color:var(--ink)}
+.gpop .box{width:min(340px,68vw)}
+.gpop h2{display:flex;align-items:center;gap:6px;font-size:14px;margin:0 22px 2px 0;color:var(--ink)}
+.gpop h2 .st{margin-left:6px}
+.gpop .sub{color:#5b706d;font-size:11px;margin-bottom:8px}
+.gpop .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px}
+.gpop .grid.g3{grid-template-columns:1fr 1fr 1fr}
+.gpop .full{grid-column:1/-1}
+.gpop label{display:block;font-size:11px;color:#5b706d;margin-bottom:2px}
+.gpop input{padding:5px 7px;font-size:12px;background:#fff;color:var(--ink);border-color:#c5cfcb;text-overflow:ellipsis}
+.gpop input[readonly]{background:#eef2f0}
+.gpop hr{border:0;border-top:1px solid #dde5e2;margin:8px 0}
+.gpop .act{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;margin-top:10px}
+.gpop .act button{flex:none;min-width:64px;padding:5px 10px;font-size:12px;color:var(--ink);background:#fff;border-color:#c5cfcb}
+.gpop .act button.pri{background:var(--ink);color:#fff;border-color:var(--ink)}
+.gpop .act button.dng{color:#a02020;border-color:#e0b8b8}
+.gpop .act .sp{flex:1}
+.gpop #vActs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.gpop #vActs button{width:100%;min-width:0;padding:7px 10px}
+.gpop .val{padding:3px 0;border-bottom:1px solid #e3e9e6;min-height:22px;word-break:break-word}
+.gpop .nil{color:#9aaaa7}
+.gpop .sec{grid-column:1/-1;font-size:11px;font-weight:600;color:#0e7c7b;margin-top:4px}
+@media(max-width:720px){#app{grid-template-columns:1fr;grid-template-rows:42% 58%}}
+/* ---- Tampilan compact ---- */
+html,body{font-size:13px}
+.top{height:42px;gap:10px;padding:0 12px}
+.top nav a{padding:5px 10px}
+aside{padding:12px;gap:12px}
+h2{font-size:12px;margin:0 0 6px}
+select,input{padding:5px 8px}
+button{padding:5px 9px}
+.lg{margin:4px 0}
+.area{padding:6px 8px}.area small{margin-top:1px}
+.sl{margin:8px 0 3px}
+.pager{margin-top:6px}
+#bar{padding:4px;bottom:26px}#bar button{padding:6px 10px}#bar .grp{padding:0 4px}
+#bHint{bottom:76px;font-size:11.5px;padding:5px 10px}
+.gpop .leaflet-popup-content{margin:8px 10px}
+.gpop .box{width:min(320px,68vw)}
+.gpop .grid{gap:5px 8px}
+.gpop .val{padding:2px 0;min-height:20px}
+.gpop .act{margin-top:8px}
+.gpop input{padding:4px 6px}
+.pop .pi{border-collapse:collapse;margin:4px 0 2px}.pop .pi td{padding:1px 8px 1px 0;vertical-align:top;font-size:12px}.pop .pi td:first-child{color:#5b706d;white-space:nowrap}
+.gpop textarea{width:100%;padding:4px 6px;font:inherit;font-size:12px;border:1px solid #c5cfcb;border-radius:6px;resize:vertical;color:var(--ink);background:#fff}
+</style>
+</head>
+<body>
+<div id="login">
+  <form id="loginForm">
+    <h1>DIGIMON GIS</h1>
+    <input id="em" type="email" placeholder="Email" required autocomplete="username">
+    <input id="pw" type="password" placeholder="Password" required autocomplete="current-password">
+    <button>Masuk</button>
+    <span id="lerr" style="color:#a02020"></span>
+  </form>
+</div>
+
+<header class="top"><b>DIGIMON GIS</b>
+  <nav><a class="on" href="index.html">Peta Polygon</a><a href="table.html">List Polygon</a></nav>
+  <span class="sp"></span><span class="sub" id="who"></span><button id="logout" type="button">Keluar</button></header>
+<div id="app">
+  <aside>
+    <section>
+      <h2>Pencarian</h2>
+      <label class="sl" for="sLat">Koordinat (latitude, longitude)</label>
+      <div class="srow"><input id="sLat" placeholder="-7.2575" inputmode="decimal"><input id="sLng" placeholder="112.7521" inputmode="decimal"><button id="sGoC" type="button">Cari</button></div>
+      <label class="sl" for="sId">ID Polygon / Nama Polygon</label>
+      <div class="srow"><input id="sId" placeholder="PLY-00001 atau nama" autocomplete="off"><button id="sGoP" type="button">Cari</button></div>
+      <div id="sRes"></div>
+    </section>
+    <section>
+      <h2>Layer</h2>
+      <label class="lg"><input type="checkbox" data-k="customer" checked style="width:auto"><span class="dot" style="background:var(--cust)"></span>Pelanggan (UN ID)</label>
+      <label class="lg"><input type="checkbox" data-k="odp" checked style="width:auto"><span class="dot" style="background:var(--odp)"></span>ODP Plan</label>
+      <label class="lg"><input type="checkbox" data-k="prospect" checked style="width:auto"><span class="dot" style="background:var(--pros)"></span>Demand</label>
+      <label class="lg"><input type="checkbox" id="lyKml" style="width:auto"><span class="dot" style="background:#e11d48"></span>Desain (KML)</label>
+      <div id="kmlInfo" style="color:var(--mute);font-size:12px"></div>
+      <div id="count" style="color:var(--mute);font-size:12px"></div>
+    </section>
+    <section>
+      <h2>Daftar polygon</h2>
+      <div id="areas"><span id="empty" style="color:var(--mute)">Belum ada area. Gambar polygon di peta.</span></div>
+      <div class="pager" id="pager"></div>
+    </section>
+  </aside>
+  <div id="mapwrap">
+    <div id="map"></div>
+    <div id="bHint" role="status"></div>
+<div id="modal" class="mdl" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="box">
+    <h2 id="mTitle">Form Order Desain FTTH</h2>
+    <div class="sub" id="mSub">Isi nama polygon dan pilih STO.</div>
+    <div class="grid g3">
+      <div><label for="fCode">Polygon ID</label><input id="fCode" readonly></div>
+      <div><label for="fCust">Total Pelanggan</label><input id="fCust" readonly></div>
+      <div><label for="fOdp">Total ODP</label><input id="fOdp" readonly></div>
+      <div class="full"><label for="fName">Nama Polygon</label><input id="fName" maxlength="80"></div>
+    </div>
+    <hr>
+    <div class="grid">
+      <div class="full"><label for="fSto">STO (ketik kode atau nama)</label><input id="fSto" list="stoList" autocomplete="off" placeholder="mis. BWG atau Banyuwangi"><datalist id="stoList"></datalist></div>
+      <div><label for="fNama">Nama STO</label><input id="fNama" readonly></div>
+      <div><label for="fArea">Area</label><input id="fArea" readonly></div>
+      <div><label for="fReg">Regional</label><input id="fReg" readonly></div>
+      <div><label for="fBranch">Branch</label><input id="fBranch" readonly></div>
+      <div><label for="fCluster">Cluster</label><input id="fCluster" readonly></div>
+      <div><label for="fWok">WOK</label><input id="fWok" readonly></div>
+      <div><label for="fDist">District</label><input id="fDist" readonly></div>
+      <div><label for="fSub">Sub District</label><input id="fSub" readonly></div>
+      <div class="full"><label for="fKab">Kabupaten/Kota</label><input id="fKab" readonly></div>
+    </div>
+    <div class="act"><button id="mCancel" type="button">Batal</button><button id="mSave" type="button" class="pri">Simpan</button></div>
+  </div>
+</div>
+<div id="modalView" class="mdl" role="dialog" aria-modal="true" aria-labelledby="vTitle">
+  <div class="box">
+    <h2 id="vTitle">Resume Order</h2>
+    <div class="sub">Ringkasan order. Tekan Edit untuk mengubah form order.</div>
+    <div class="grid" id="vBody"></div>
+    <div class="act" id="vActs"></div>
+  </div>
+</div>
+<div id="modal2" class="mdl" role="dialog" aria-modal="true" aria-labelledby="m2Title">
+  <div class="box">
+    <h2 id="m2Title"></h2><div class="sub" id="m2Sub"></div>
+    <div class="grid" id="m2Body"></div>
+    <div class="act"><button id="m2Cancel" type="button">Batal</button><button id="m2Save" type="button" class="pri">Simpan</button></div>
+  </div>
+</div>
+<div id="modalPt" class="mdl" role="dialog" aria-modal="true" aria-labelledby="ptTitle">
+  <div class="box" style="width:min(300px,68vw)">
+    <h2 id="ptTitle">Tambah titik</h2>
+    <div class="grid">
+      <div><label for="ptId" id="ptIdL">ID</label><input id="ptId" readonly></div>
+      <div><label for="ptNm" id="ptNmL">Name</label><input id="ptNm" readonly></div>
+      <div class="full"><label for="ptNote">Keterangan (opsional)</label><input id="ptNote" maxlength="200" autocomplete="off"></div>
+      <div><label for="ptLat">Latitude</label><input id="ptLat" readonly></div>
+      <div><label for="ptLng">Longitude</label><input id="ptLng" readonly></div>
+      <div class="full"><label for="ptAddr">Alamat (otomatis)</label><textarea id="ptAddr" rows="2" maxlength="300" placeholder="Mencari alamat..."></textarea></div>
+    </div>
+    <div class="act"><button id="ptCancel" type="button">Batal</button><button id="ptSave" type="button" class="pri">Simpan</button></div>
+  </div>
+</div>
+    <div id="bar" role="toolbar" aria-label="Tools peta">
+      <div class="grp">
+        <button id="tPoly" type="button" title="Gambar polygon">Polygon</button>
+        <button id="tRect" type="button" title="Gambar kotak">Kotak</button>
+      </div>
+      <div class="grp">
+        <button id="addOdp" type="button"><span class="dot" style="background:var(--odp)"></span>ODP Plan</button>
+        <button id="addPros" type="button"><span class="dot" style="background:var(--pros)"></span>Demand</button>
+      </div>
+      <div class="grp">
+        <button id="tEditPoly" type="button" disabled title="Klik polygon lalu tekan Edit">Edit Polygon</button>
+        <button id="editPts" type="button" disabled title="Klik polygon lalu tekan Edit">Geser Titik</button>
+      </div>
+      <div class="grp" id="gSess" style="display:none"><span class="chip" id="sessTxt"></span><button id="sessForm" type="button" class="on">Selesai</button><button id="sessEnd" type="button">Batal</button></div>
+      <div class="grp" id="gDraw" style="display:none"><button id="cUndo" type="button">Undo titik</button><button id="cCancel" type="button">Batal</button></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+// ====== KONFIGURASI ====== (URL & anon key ada di config.js)
+const MIN_ZOOM = 12, LIMIT = 5000;
+// =========================
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const COL = {customer:'#4b8f6b', odp:'#e8731a', prospect:'#2563eb'};
+const LABEL = {customer:'Pelanggan', odp:'ODP Plan', prospect:'Demand'};
+let mode = null, timer;
+
+// ---- Notifikasi = modal HTML (pengganti toast, alert, dan confirm) ----
+const NMK = {success:['#15803d','✓','Berhasil'], error:['#b91c1c','!','Terjadi kesalahan'], warn:['#d97706','!','Perhatian'], info:['#0e7c7b','i','Informasi'], confirm:['#d97706','?','Konfirmasi']};
+let nmQ = [], nmCur = null, nmTimer = null;
+function nmKind(m){
+  if(/gagal|error|violat|denied|terkunci|ditolak|tidak ditemukan|tidak bisa|salah|failed|not found|permission/i.test(m)) return 'error';
+  if(/wajib|harus|Selesaikan|Pilih |Zoom in|belum|tidak valid|invalid|Koordinat/i.test(m)) return 'warn';
+  if(/disimpan|ditambahkan|diperbarui|dihapus|terupload|disubmit|Status:|berhasil|dibatalkan/i.test(m)) return 'success';
+  return 'info';
+}
+function nmEl(){
+  let el = document.getElementById('nm'); if(el) return el;
+  const st = document.createElement('style');
+  st.textContent = `#nm{position:fixed;inset:0;background:rgba(15,42,44,.55);display:none;align-items:center;justify-content:center;z-index:20000;padding:16px}
+#nm .nb{background:#fff;color:#0f2a2c;border-radius:12px;width:min(380px,100%);padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.4);font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:14px;text-align:center}
+#nm .ni{width:44px;height:44px;border-radius:50%;margin:0 auto 10px;display:grid;place-items:center;color:#fff;font-size:22px;font-weight:700}
+#nm .nt{font-weight:600;font-size:15px;margin-bottom:4px}
+#nm .nx{color:#3d5553;white-space:pre-line;word-break:break-word;margin-bottom:14px}
+#nm .na{display:flex;gap:8px;justify-content:center}
+#nm .na button{min-width:88px;padding:8px 14px;border-radius:8px;border:1px solid #c5cfcb;background:#fff;color:#0f2a2c;cursor:pointer;font:inherit}
+#nm .na button.pri{background:#0f2a2c;color:#fff;border-color:#0f2a2c}
+#nm .na button.dng{background:#a02020;color:#fff;border-color:#a02020}
+#nm .na button:focus-visible{outline:2px solid #0e7c7b;outline-offset:2px}`;
+  document.head.appendChild(st);
+  el = document.createElement('div'); el.id = 'nm';
+  el.innerHTML = '<div class="nb" role="alertdialog" aria-modal="true" aria-labelledby="nmt" aria-describedby="nmx"><div class="ni" id="nmi"></div><div class="nt" id="nmt"></div><div class="nx" id="nmx"></div><div class="na" id="nma"></div></div>';
+  el.addEventListener('click', e => { if(e.target === el) nmClose(false); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && nmCur){ e.stopPropagation(); nmClose(false); } }, true);
+  document.body.appendChild(el);
+  return el;
+}
+function nmShow(){
+  if(nmCur || !nmQ.length) return;
+  nmCur = nmQ.shift();
+  const el = nmEl(), k = NMK[nmCur.type] || NMK.info, g = id => document.getElementById(id);
+  g('nmi').style.background = k[0]; g('nmi').textContent = k[1];
+  g('nmt').textContent = k[2]; g('nmx').textContent = nmCur.msg;
+  const a = g('nma'); a.innerHTML = '';
+  const mk = (txt, cls, val) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = txt; if(cls) b.className = cls; b.onclick = () => nmClose(val); a.appendChild(b); return b; };
+  let main;
+  if(nmCur.type === 'confirm'){ mk('Batal', '', false); main = mk(nmCur.ok, 'dng', true); }
+  else main = mk('OK', 'pri', true);
+  el.style.display = 'flex'; main.focus();
+  if(nmCur.type === 'success' || nmCur.type === 'info') nmTimer = setTimeout(() => nmClose(true), 2400);
+}
+function nmClose(v){
+  if(!nmCur) return;
+  clearTimeout(nmTimer); document.getElementById('nm').style.display = 'none';
+  const c = nmCur; nmCur = null; c.res(v); nmShow();
+}
+function notify(msg, type){
+  const m = String(msg);
+  if((nmCur && nmCur.msg === m) || (nmQ.length && nmQ[nmQ.length-1].msg === m)) return Promise.resolve(true);   // jangan menumpuk pesan sama
+  return new Promise(res => { nmQ.push({msg:m, type:type || nmKind(m), res}); nmShow(); });
+}
+function ask(msg, okLabel){ return new Promise(res => { nmQ.push({msg:String(msg), type:'confirm', ok:okLabel || 'Ya', res}); nmShow(); }); }
+function toast(msg, type){ notify(msg, type); }   // nama lama tetap dipakai di seluruh kode
+const debounce=(fn,ms=300)=>(...a)=>{clearTimeout(timer);timer=setTimeout(()=>fn(...a),ms)};
+
+// ---- Peta ----
+const map = L.map('map',{preferCanvas:true}).setView([-2.5,118],5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
+const layers = {customer:L.layerGroup().addTo(map), odp:L.layerGroup().addTo(map), prospect:L.layerGroup().addTo(map)};
+const areas = new L.FeatureGroup().addTo(map);
+document.querySelectorAll('[data-k]').forEach(c=>c.onchange=()=>{
+  const l=layers[c.dataset.k]; c.checked?map.addLayer(l):map.removeLayer(l)});
+
+// ---- Titik ----
+async function loadPoints(){
+  if(map.getZoom()<MIN_ZOOM){Object.values(layers).forEach(l=>l.clearLayers());$('count').textContent=`Zoom in (min. ${MIN_ZOOM}) untuk melihat titik`;return}
+  const b=map.getBounds();
+  const {data,error}=await sb.rpc('get_points',{w:b.getWest(),s:b.getSouth(),e:b.getEast(),n:b.getNorth(),lim:LIMIT});
+  if(error) return toast('Gagal memuat titik: '+error.message);
+  Object.values(layers).forEach(l=>l.clearLayers());
+  data.features.forEach(f=>{
+    const p=f.properties; let [x,y]=f.geometry.coordinates;
+    const pm=pendingMoves[p.id], drag=editPts&&session&&map.getZoom()>=15&&sessionRing&&(pm||inRing(x,y,sessionRing));
+    if(pm){x=pm.lng;y=pm.lat}
+    const m=drag
+      ? L.marker([y,x],{draggable:true,icon:L.divIcon({className:'',iconSize:[14,14],html:`<span style="display:block;width:14px;height:14px;border-radius:50%;background:${COL[p.kind]};border:2px solid #fff;box-shadow:0 0 0 1px #0006"></span>`})})
+      : L.circleMarker([y,x],{radius:p.kind==='customer'?4:7,color:'#fff',weight:1,fillColor:COL[p.kind],fillOpacity:.95});
+    if(drag) m.on('dragend',ev=>{const g=ev.target.getLatLng();pendingMoves[p.id]={lat:g.lat,lng:g.lng,kind:p.kind};ui()});
+    m.bindPopup(pointPopup(p,x,y));
+    layers[p.kind].addLayer(m);
+  });
+  $('count').textContent=`${data.features.length} titik di layar`+(data.features.length>=LIMIT?` (dibatasi ${LIMIT}, zoom in)`:'');
+}
+async function delPoint(id){
+  if(!await ask('Hapus titik ini?','Hapus')) return;
+  const {error}=await sb.from('points').delete().eq('id',id);
+  error?toast(error.message):(map.closePopup(),loadPoints());
+}
+// ---- Tools bar (bawah peta) ----
+let drawH=null, drawing=false, editPts=false, polyEditing=null, pendingReload=false, preview=null, session=null, sessionRing=null;
+let origGeo=null, pendingMoves={}, pendingAdds=[], addSeq=0;
+const tempLayer=L.layerGroup().addTo(map);
+const DLH=L.drawLocal.draw.handlers;
+DLH.polygon.tooltip={start:'Klik untuk mulai menggambar polygon',cont:'Klik untuk menambah titik',end:'Klik titik pertama untuk menyelesaikan'};
+DLH.polygon.error='<strong>Sisi polygon tidak boleh berpotongan</strong>';
+DLH.rectangle.tooltip={start:'Klik dan seret untuk membuat kotak'};
+const layerOf=id=>areas.getLayers().find(x=>x.feature.properties.id===id);
+const clearPreview=()=>{if(preview){map.removeLayer(preview);preview=null}};
+function inRing(x,y,r){let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const [xi,yi]=r[i],[xj,yj]=r[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c}return c}
+function ui(){
+  const on=(id,v)=>$(id).classList.toggle('on',!!v);
+  on('tPoly',drawH&&drawH._kind==='poly'); on('tRect',drawH&&drawH._kind==='rect');
+  on('addOdp',mode==='odp'); on('addPros',mode==='prospect'); on('editPts',editPts); on('tEditPoly',polyEditing);
+  $('tPoly').disabled=$('tRect').disabled=!!session;
+  $('tEditPoly').disabled=!session; $('editPts').disabled=!session;
+  const sp=session?areaFeatures.find(f=>f.properties.id===session)?.properties:null;
+  const nMove=Object.keys(pendingMoves).length, nAdd=pendingAdds.length;
+  $('gSess').style.display=session?'flex':'none'; $('sessTxt').textContent='Edit '+(sp?sp.code:'');
+  $('gDraw').style.display=drawing?'flex':'none';
+  $('cUndo').style.display=drawH&&drawH._kind==='poly'?'':'none';
+  const H=drawing?'Klik peta untuk menambah titik. Klik titik pertama untuk menyelesaikan polygon.'
+    :mode?`Klik peta untuk menaruh ${LABEL[mode]}. Tekan tombolnya lagi untuk batal.`
+    :session?`Mode edit ${sp?sp.code:''}: seret sudut polygon dan titik, atau tambah ODP Plan / Demand.${editPts&&map.getZoom()<15?' Zoom in (min. 15) agar titik bisa digeser.':''}${nMove?' '+nMove+' titik digeser.':''}${nAdd?' '+nAdd+' titik baru.':''} Tekan Selesai untuk menyimpan.`:'';
+  $('bHint').textContent=H; $('bHint').style.display=H?'block':'none';
+  $('map').classList.toggle('add',!!mode||drawing);
+}
+function stopDraw(){if(drawH)drawH.disable()}
+function setMode(m){
+  if(m&&busy()) return toast('Selesaikan form yang sedang terbuka dulu');
+  const next=(mode===m)?null:m;
+  if(next) stopDraw();
+  mode=next; ui();
+}
+function startDraw(kind){
+  if(busy()) return toast('Selesaikan form yang sedang terbuka dulu');
+  if(session) return toast('Selesaikan atau batalkan mode edit dulu');
+  const same=drawH&&drawH._kind===kind;
+  stopDraw(); if(same) return;
+  mode=null;
+  const shape={color:'#0e7c7b',weight:2};
+  drawH=kind==='poly'?new L.Draw.Polygon(map,{allowIntersection:false,shapeOptions:shape}):new L.Draw.Rectangle(map,{shapeOptions:shape});
+  drawH._kind=kind; drawH.enable();
+}
+map.on('draw:drawstart',()=>{drawing=true;ui()});
+map.on('draw:drawstop',()=>{drawing=false;drawH=null;ui()});
+
+// ---- Sesi edit: Edit -> semua alat aktif -> Selesai -> form order -> simpan ----
+const ringOf=id=>areaFeatures.find(f=>f.properties.id===id)?.geometry.coordinates[0]||null;
+const geoOf=l=>JSON.stringify(l.toGeoJSON().geometry);
+function clearPendingAdds(){pendingAdds.forEach(a=>tempLayer.removeLayer(a.tmp));pendingAdds=[]}
+function dropAdd(id){
+  const i=pendingAdds.findIndex(a=>a.id===id); if(i<0) return;
+  tempLayer.removeLayer(pendingAdds[i].tmp); pendingAdds.splice(i,1); map.closePopup(); ui();
+}
+function finishSession(){                                   // reset semua keadaan edit (tanpa menyimpan)
+  const l=session?layerOf(session):null; if(l&&polyEditing) l.editing.disable();
+  polyEditing=null; editPts=false; session=null; sessionRing=null; origGeo=null;
+  pendingMoves={}; clearPendingAdds(); ui();
+}
+function endSession(){finishSession()}
+function beginSession(id){
+  finishSession();
+  const l=layerOf(id); if(!l) return;
+  session=id; sessionRing=ringOf(id); origGeo=geoOf(l);
+  map.fitBounds(l.getBounds(),{padding:[40,40],maxZoom:18});
+  polyEditing=id; l.editing.enable();                       // sudut polygon bisa digeser
+  editPts=true;                                             // titik di dalam polygon bisa digeser
+  ui(); loadPoints();
+}
+function resumeEdit(){
+  const l=session&&layerOf(session); if(!l) return finishSession();
+  polyEditing=session; l.editing.enable(); editPts=true; ui(); loadPoints();
+}
+function finishEdit(){                                      // tombol Selesai di toolbar -> tampilkan form order
+  if(busy()||!session) return;
+  const l=layerOf(session); if(!l) return finishSession();
+  if(polyEditing){l.editing.disable();polyEditing=null}
+  editPts=false; mode=null; ui(); loadPoints();
+  const p=l.feature.properties, parts=[];
+  if(geoOf(l)!==origGeo) parts.push('bentuk polygon diubah');
+  const nm=Object.keys(pendingMoves).length; if(nm) parts.push(nm+' titik digeser');
+  if(pendingAdds.length) parts.push(pendingAdds.length+' titik baru');
+  openOrder({id:session,edit:true,ll:centerOf(session),code:p.code,name:p.name,customer:p.customer,odp:p.odp,sto_code:p.sto_code,
+    summary:(parts.length?'Perubahan di peta: '+parts.join(', ')+'.':'Tidak ada perubahan di peta.')+' Simpan untuk menerapkan, Batal untuk kembali mengedit.'});
+}
+async function cancelSession(){                             // tombol Batal di toolbar -> buang semua perubahan
+  if(busy()||!session) return;
+  const l=layerOf(session);
+  const dirty=Object.keys(pendingMoves).length||pendingAdds.length||(l&&geoOf(l)!==origGeo);
+  if(dirty&&!await ask('Batalkan semua perubahan yang belum disimpan?','Ya, batalkan')) return;
+  finishSession(); await loadAreas(); loadPoints();
+}
+$('tPoly').onclick=()=>startDraw('poly'); $('tRect').onclick=()=>startDraw('rect');
+$('addOdp').onclick=()=>setMode('odp'); $('addPros').onclick=()=>setMode('prospect');
+$('editPts').onclick=()=>{if(!session)return; editPts=!editPts; ui(); loadPoints()};
+$('tEditPoly').onclick=()=>{
+  const l=session&&layerOf(session); if(!l) return;
+  if(polyEditing){l.editing.disable();polyEditing=null}else{l.editing.enable();polyEditing=session}
+  ui();
+};
+$('cUndo').onclick=()=>{if(drawH&&drawH.deleteLastVertex)drawH.deleteLastVertex()};
+$('cCancel').onclick=stopDraw;
+$('sessForm').onclick=finishEdit; $('sessEnd').onclick=cancelSession;
+// Input titik ODP Plan / Demand: modal di dalam peta
+let ptDraft=null, ptMarker=null;
+// ---- Pencarian di peta: koordinat atau ID polygon ----
+let sMark=null;
+function clearSearch(){ if(sMark){map.removeLayer(sMark);sMark=null} }
+function goCoord(){
+  let a=$('sLat').value.trim(), b=$('sLng').value.trim();
+  if(a&&!b){const m=a.split(/[;\s]+|,\s/).filter(Boolean); if(m.length>=2){a=m[0];b=m[1];$('sLat').value=a;$('sLng').value=b}}   // tempel "lat, lng" di kolom pertama
+  const lat=parseFloat(a.replace(',','.')), lng=parseFloat(b.replace(',','.'));
+  if(!isFinite(lat)||!isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180) return toast('Koordinat tidak valid. Contoh: -7.2575, 112.7521');
+  const ll=L.latLng(lat,lng); clearSearch();
+  sMark=L.circleMarker(ll,{radius:10,color:'#e11d48',weight:3,fillColor:'#e11d48',fillOpacity:.15}).addTo(map)
+    .bindPopup(`<div class="pop"><b>Hasil pencarian</b><br>${lat.toFixed(6)}, ${lng.toFixed(6)}<br><button onclick="clearSearch()">Hapus penanda</button></div>`);
+  map.setView(ll,Math.max(map.getZoom(),17)); sMark.openPopup();
+}
+function findAreas(q){
+  q=q.trim().toUpperCase(); if(!q) return [];
+  const pad=/^\d+$/.test(q)?'PLY-'+q.padStart(5,'0'):null, all=areaFeatures.map(f=>f.properties);
+  const exact=all.filter(p=>(p.code||'').toUpperCase()===q||p.code===pad);
+  return exact.length?exact:all.filter(p=>(p.code||'').toUpperCase().includes(q)||(p.name||'').toUpperCase().includes(q)).slice(0,8);
+}
+function goPoly(id){
+  const l=layerOf(id); if(!l) return toast('Polygon tidak ditemukan di peta');
+  $('sRes').innerHTML='';
+  const i=listRows.findIndex(x=>x.id===id); if(i>=0){listPage=Math.floor(i/LIST_PER)+1;drawList()}   // daftar ikut ke halaman polygon ini
+  map.fitBounds(l.getBounds(),{padding:[40,40],maxZoom:18});
+  l.setStyle({weight:5}); setTimeout(()=>l.setStyle({weight:2}),2500);
+  openView(id,l.getBounds().getCenter());
+}
+function searchPoly(){
+  const r=findAreas($('sId').value);
+  if(!r.length){$('sRes').innerHTML='<div style="color:var(--mute);font-size:12px">Polygon tidak ditemukan.</div>';return}
+  if(r.length===1) return goPoly(r[0].id);
+  $('sRes').innerHTML=r.map(p=>`<div class="li" data-id="${esc(p.id)}"><b>${esc(p.code)}</b> ${esc(p.name)}</div>`).join('');
+  $('sRes').querySelectorAll('.li').forEach(el=>el.onclick=()=>goPoly(el.dataset.id));
+}
+$('sGoC').onclick=goCoord; $('sGoP').onclick=searchPoly;
+$('sLat').addEventListener('keydown',e=>{if(e.key==='Enter')goCoord()});
+$('sLng').addEventListener('keydown',e=>{if(e.key==='Enter')goCoord()});
+$('sId').addEventListener('keydown',e=>{if(e.key==='Enter')searchPoly()});
+
+// ---- Panel = popup Leaflet di peta (form & resume dipindah ke dalam popup) ----
+const BOX={order:$('modal').querySelector('.box'),view:$('modalView').querySelector('.box'),dlg:$('modal2').querySelector('.box'),pt:$('modalPt').querySelector('.box')};
+const HOME=new Map(Object.values(BOX).map(b=>[b,b.parentNode]));
+Object.values(BOX).forEach(b=>L.DomEvent.on(b,'keydown keyup keypress',e=>{   // ketikan di form tidak boleh menggeser/zoom peta
+  if(e.type==='keydown'&&e.key==='Escape') closePanel();
+  e.stopPropagation();
+}));
+let panel=null, anchorLL=null;
+const busy=()=>!!panel&&(panel.name==='order'||panel.name==='dlg');
+const centerOf=id=>layerOf(id)?.getBounds().getCenter()||map.getCenter();
+function showPanel(name,ll,onClose){
+  closePanel();
+  const box=BOX[name];
+  const p=L.popup({className:'gpop',minWidth:240,maxWidth:420,maxHeight:Math.max(220,map.getSize().y-110),offset:[0,-4],
+    closeOnClick:false,autoClose:false,keepInView:true,autoPanPaddingTopLeft:[12,12],autoPanPaddingBottomRight:[12,12]});
+  panel={name,p,onClose};
+  p.on('remove',()=>{
+    if(panel&&panel.p===p){const c=panel;panel=null;if(c.onClose)c.onClose()}
+    // Kembalikan form ke tempatnya SETELAH event klik selesai. Bila dipindah saat itu juga, Leaflet tidak lagi
+    // mengenali klik tombol Batal sebagai klik di dalam popup, sehingga klik tembus ke peta (dan membuka popup baru).
+    setTimeout(()=>{ if(!(panel&&BOX[panel.name]===box)) HOME.get(box).appendChild(box); },0);
+  });
+  p.setLatLng(ll).setContent(box).openOn(map);
+}
+function closePanel(){ if(panel) map.closePopup(panel.p) }
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel&&!drawing)closePanel()});
+// ---- ID otomatis + alamat otomatis untuk ODP Plan / Demand ----
+const genCode = kind => (kind === 'odp' ? 'ODP' : 'DMD') + String(Math.floor(100000 + Math.random() * 900000));
+// Alamat dari koordinat: OpenStreetMap Nominatim (maks. 1 permintaan per detik, hasil disimpan di cache)
+const geoCache = new Map(); let geoLast = 0, geoChain = Promise.resolve();
+function formatAddress(j){
+  if(!j || j.error) return '';
+  const a = j.address || {};
+  const road = [a.road || a.pedestrian || a.footway || a.path, a.house_number].filter(Boolean).join(' ');
+  const parts = [road, a.neighbourhood || a.hamlet, a.suburb || a.village, a.city_district || a.subdistrict || a.district,
+                 a.city || a.town || a.municipality || a.county, a.state, a.postcode].filter(Boolean);
+  return [...new Set(parts)].join(', ') || String(j.display_name || '').replace(/, Indonesia$/, '');
+}
+function geocode(lat, lng){
+  const key = lat.toFixed(5) + ',' + lng.toFixed(5);
+  if(geoCache.has(key)) return Promise.resolve(geoCache.get(key));
+  const run = async () => {
+    const wait = geoLast + 1100 - Date.now(); if(wait > 0) await new Promise(r => setTimeout(r, wait));
+    geoLast = Date.now();
+    try{
+      const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 8000);
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=id&lat=${lat}&lon=${lng}`, {signal:ac.signal});
+      clearTimeout(tm);
+      if(!r.ok) return null;
+      const a = formatAddress(await r.json());
+      if(a) geoCache.set(key, a);
+      return a || null;
+    }catch(e){ return null; }
+  };
+  const p = geoChain.then(run); geoChain = p.catch(() => {}); return p;
+}
+// Insert titik; jika ID acak bentrok (kolom un_id unik), buat ID baru dan ulangi
+async function insertPoints(rows){
+  for(let i = 0; i < 3; i++){
+    const {error} = await sb.from('points').insert(rows);
+    if(!error) return null;
+    if(error.code !== '23505' || !/un_id/.test((error.message || '') + (error.details || ''))) return error;
+    rows.forEach(r => { r.un_id = genCode(r.kind); });
+  }
+  return {message:'Gagal membuat ID unik. Coba simpan lagi.'};
+}
+const piRows = (p, x, y) => {
+  const net = p.kind !== 'customer', row = (l, v) => `<tr><td>${l}</td><td>${v}</td></tr>`;
+  let r = row(net ? LABEL[p.kind] + ' ID' : 'UN ID', esc(p.un_id || '-'));
+  if(net) r += row(LABEL[p.kind] + ' Name', esc(p.name || LABEL[p.kind])) + row('Keterangan', esc(p.note || '-'));
+  else if(p.name) r += row('Nama', esc(p.name));
+  r += row('Latitude', Number(y).toFixed(6)) + row('Longitude', Number(x).toFixed(6));
+  if(net) r += row('Alamat', p.address ? esc(p.address) : '<i>belum ada</i>');
+  return `<table class="pi">${r}</table>`;
+};
+function pointPopup(p, x, y){
+  const net = p.kind !== 'customer';
+  const fill = net && !p.address ? `<button type="button" class="n" onclick="fillAddress('${p.id}',${y},${x})">Ambil alamat</button>` : '';
+  return `<div class="pop"><b>${LABEL[p.kind]}</b>${piRows(p, x, y)}${fill}<button type="button" onclick="delPoint('${p.id}')">Hapus titik</button></div>`;
+}
+async function fillAddress(id, lat, lng){            // untuk titik lama yang belum punya alamat
+  map.closePopup();
+  const a = await geocode(lat, lng);
+  if(!a) return toast('Alamat tidak ditemukan. Coba lagi nanti.', 'warn');
+  const {error} = await sb.from('points').update({address:a}).eq('id', id);
+  error ? toast(error.message, 'error') : loadPoints();
+}
+async function refreshAddresses(jobs){               // titik ODP Plan / Demand yang digeser: alamat diperbarui di latar belakang
+  for(const [pid, m] of jobs){
+    const a = await geocode(m.lat, m.lng); if(!a) continue;
+    await sb.from('points').update({address:a}).eq('id', pid);
+  }
+  loadPoints();
+}
+let ptTok = 0;
+function openPoint(kind,ll){
+  if(busy()) return toast('Selesaikan form yang sedang terbuka dulu');
+  closePanel();
+  ptDraft={kind,ll,code:genCode(kind),tok:++ptTok};
+  ptMarker=L.circleMarker(ll,{radius:8,color:'#fff',weight:2,fillColor:COL[kind],fillOpacity:.9}).addTo(map);
+  $('ptTitle').innerHTML=`<span class="dot" style="background:${COL[kind]}"></span>Tambah ${LABEL[kind]}`;
+  $('ptIdL').textContent=LABEL[kind]+' ID'; $('ptNmL').textContent=LABEL[kind]+' Name';
+  $('ptId').value=ptDraft.code; $('ptNm').value=LABEL[kind]; $('ptNote').value='';
+  $('ptLat').value=ll.lat.toFixed(6); $('ptLng').value=ll.lng.toFixed(6);
+  $('ptAddr').value=''; $('ptAddr').placeholder='Mencari alamat...';
+  showPanel('pt',ll,cleanupPt); $('ptNote').focus();
+  const d=ptDraft;
+  d.addrP=geocode(ll.lat,ll.lng).then(a=>{
+    if(ptDraft!==d) return a;                                  // form sudah ditutup / diganti
+    if(a){ if(!$('ptAddr').value) $('ptAddr').value=a }
+    else $('ptAddr').placeholder='Alamat tidak ditemukan. Isi manual (opsional).';
+    return a;
+  });
+}
+function cleanupPt(){
+  if(ptMarker){map.removeLayer(ptMarker);ptMarker=null}
+  ptDraft=null;
+}
+const closePoint=()=>{if(panel&&panel.name==='pt')closePanel()};
+$('ptCancel').onclick=closePoint;
+$('ptNote').addEventListener('keydown',e=>{if(e.key==='Enter')$('ptSave').click()});
+$('ptSave').onclick=async()=>{
+  if(!ptDraft) return;
+  const d=ptDraft, {kind,ll}=d;
+  const rec={kind,un_id:d.code,name:LABEL[kind],note:$('ptNote').value.trim()||null,address:$('ptAddr').value.trim()||null,lat:ll.lat,lng:ll.lng};
+  $('ptSave').disabled=true;
+  if(!rec.address){                                            // tunggu alamat otomatis sebentar bila belum selesai
+    const a=await Promise.race([d.addrP,new Promise(r=>setTimeout(()=>r(null),4000))]);
+    rec.address=$('ptAddr').value.trim()||a||null;
+  }
+  if(session){                                                 // mode edit: disimpan nanti lewat tombol Selesai
+    const a={...rec,id:++addSeq};
+    a.tmp=L.circleMarker([a.lat,a.lng],{radius:8,color:'#fff',weight:2,fillColor:COL[kind],fillOpacity:.9,dashArray:'3'}).addTo(tempLayer)
+      .bindPopup(`<div class="pop"><b>${LABEL[kind]} (belum disimpan)</b>${piRows(a,a.lng,a.lat)}<button type="button" onclick="dropAdd(${a.id})">Batalkan titik ini</button></div>`);
+    pendingAdds.push(a); $('ptSave').disabled=false; closePoint(); ui(); return;
+  }
+  const error=await insertPoints([rec]);
+  $('ptSave').disabled=false;
+  if(error) return toast(error.message,'error');
+  closePoint(); loadPoints();
+};
+map.on('click',e=>{
+  const t=e.originalEvent&&e.originalEvent.target;
+  if(t&&!map.getContainer().contains(t)) return;           // klik berasal dari popup yang baru ditutup
+  if(mode) openPoint(mode,e.latlng);
+});
+
+// ---- Polygon (CRUD) ----
+const areaLayer = f => {
+  const l=L.geoJSON(f,{style:{color:areaColor(f.properties),weight:2,fillOpacity:.12}}).getLayers()[0];
+  l.feature=f;
+  const p=f.properties;
+  l.on('click',ev=>{
+    const t=ev.originalEvent&&ev.originalEvent.target; if(t&&!map.getContainer().contains(t)) return;
+    if(mode||drawing||polyEditing||editPts) return; openView(p.id,ev.latlng);
+  });
+  return l;
+};
+async function loadAreas(){
+  if(session){pendingReload=true;return}
+  const {data,error}=await sb.rpc('get_areas');
+  if(error) return toast(error.message);
+  areas.clearLayers();
+  data.features.forEach(f=>areas.addLayer(areaLayer(f)));
+  areaFeatures=data.features; renderList(data.features); syncKml();
+  if(session){ if(!ringOf(session)) endSession(); else sessionRing=ringOf(session) }
+  ui();
+}
+const LIST_PER=4; let listRows=[], listPage=1;
+function renderList(fs){                                     // urut terbaru -> terlama
+  const t=p=>p.created_at?Date.parse(p.created_at):0;
+  listRows=fs.map(f=>f.properties).sort((a,b)=>t(b)-t(a)||String(b.code||'').localeCompare(String(a.code||''),'id',{numeric:true}));
+  drawList();
+}
+function drawList(){
+  const box=$('areas'), pg=$('pager'); box.innerHTML='';
+  if(!listRows.length){box.innerHTML='<span style="color:var(--mute)">Belum ada area. Gambar polygon di peta.</span>';pg.innerHTML='';return}
+  const pages=Math.ceil(listRows.length/LIST_PER); listPage=Math.min(Math.max(1,listPage),pages);
+  listRows.slice((listPage-1)*LIST_PER,listPage*LIST_PER).forEach(p=>{
+    const d=document.createElement('div');d.className='area';
+    d.innerHTML=`${esc(p.name)}<div style="margin:3px 0;display:flex;flex-wrap:wrap;gap:3px">${badges(p)}</div><small>${esc(p.code||'')} ${p.sto_code?'· '+esc(p.sto_code):'· STO belum dipilih'}<br>${p.customer} pelanggan, ${p.odp} ODP, ${p.prospect} demand</small>`;
+    d.onclick=()=>{areas.eachLayer(l=>{if(l.feature.properties.id===p.id)map.fitBounds(l.getBounds())});openView(p.id)};
+    box.appendChild(d);
+  });
+  pg.innerHTML=pages>1
+    ?`<button id="pgPrev" type="button"${listPage<=1?' disabled':''}>&lsaquo; Sebelumnya</button><span>Hal ${listPage} / ${pages}</span><button id="pgNext" type="button"${listPage>=pages?' disabled':''}>Berikutnya &rsaquo;</button>`
+    :`<span>${listRows.length} polygon</span>`;
+  if(pages>1){$('pgPrev').onclick=()=>{listPage--;drawList()}; $('pgNext').onclick=()=>{listPage++;drawList()}}
+}
+const saveGeom=(id,name,layer)=>sb.rpc('upsert_area',{p_id:id,p_name:name,p_geojson:layer.toGeoJSON().geometry,p_code:null,p_sto:null});
+map.on(L.Draw.Event.CREATED, async e=>{
+  const geo=e.layer.toGeoJSON().geometry;
+  closePanel(); clearPreview(); preview=e.layer; preview.setStyle({color:'#0e7c7b',dashArray:'6 4',weight:2,fillOpacity:.15}); preview.addTo(map);
+  openOrder({geo,ll:e.layer.getBounds().getCenter(),name:'Area '+(areas.getLayers().length+1),code:'menghitung...',customer:'...',odp:'...',loading:true});
+  const [r1,r2]=await Promise.all([sb.rpc('count_in_geojson',{p_geojson:geo}),sb.rpc('next_area_code')]);
+  if(!order||order.geo!==geo) return;            // form sudah dibatalkan
+  if(r1.error||r2.error){toast((r1.error||r2.error).message);closeOrder();return}
+  Object.assign(order,{code:r2.data,customer:r1.data.customer,odp:r1.data.odp,loading:false});
+  $('fCode').value=order.code; $('fCust').value=order.customer; $('fOdp').value=order.odp; $('mSave').disabled=false;
+});
+// ---- Peran & status ----
+let ROLE=null, dlgSave=null, areaFeatures=[];
+const kmlGroup=L.featureGroup(), kmlLayers={}, kmlFail=new Set();
+let kmlOn=false, kmlBusy=false, kmlT=null;
+const SL = {submitted:'Submitted Polygon', revision:'Revision Polygon', ongoing_design:'Ongoing Design', design_complete:'Design Complete', ongoing_dsi:'Ongoing DSI', dsi_complete:'DSI Complete'};
+const SC = {submitted:'#2563eb', revision:'#d97706', ongoing_design:'#0891b2', design_complete:'#7c3aed', ongoing_dsi:'#db2777', dsi_complete:'#15803d'};
+const badge = st => `<span class="st" style="background:${SC[st]||'#666'}">${SL[st]||esc(st)}</span>`;
+const badges = p => badge(p.status);
+const areaColor = p => SC[p.status] || '#0e7c7b';
+const locked = p => p.status === 'dsi_complete';                                   // DSI Complete = terkunci
+const canUpload = p => p.status !== 'dsi_complete';                                // designer boleh upload / upload ulang
+const canStartDesign = p => p.status === 'submitted' || p.status === 'revision';   // tombol "Upload Design"
+const canStartDsi = p => p.status === 'design_complete';                           // tombol "Submit DSI"
+const canDsi = p => p.status === 'design_complete' || p.status === 'ongoing_dsi';  // form Submit DSI
+const isPlan=()=>ROLE==='planner'||ROLE==='admin', isDes=()=>ROLE==='designer'||ROLE==='admin';
+function applyRole(){
+  $('who').textContent=ROLE?('Peran: '+({planner:'Planner (User A)',designer:'Designer (User B)',admin:'Admin'}[ROLE])):'Peran belum diatur';
+  if(!ROLE) toast('Akun belum punya peran. Hubungi admin.');
+  if(!isPlan()){ $('bar').style.display='none'; }
+}
+// ---- Resume Order (modal view) ----
+let viewId=null;
+const nz=v=>v!==null&&v!==undefined&&v!=='';
+const vr=(l,v)=>`<div><label>${l}</label><div class="val">${nz(v)?esc(v):'<span class="nil">-</span>'}</div></div>`;
+function openView(id,ll){
+  const p=areaFeatures.find(x=>x.properties.id===id)?.properties; if(!p) return;
+  if(busy()) return toast('Selesaikan form yang sedang terbuka dulu');
+  closePanel();
+  viewId=id; anchorLL=ll||centerOf(id); const s=p.sto||{};
+  $('vTitle').textContent='Resume Order';
+  let h=`<div class="full" style="display:flex;flex-wrap:wrap;gap:4px">${badges(p)}</div>`+vr('Polygon ID',p.code)+vr('Nama Polygon',p.name)+vr('Total Pelanggan',p.customer)+vr('Total ODP',p.odp)+vr('Total Demand',p.prospect)
+    +`<div class="sec">Wilayah STO</div>`+vr('STO',p.sto_code)+vr('Nama STO',s.nama_sto)+vr('Area',s.area)+vr('Regional',s.regional)+vr('Branch',s.branch)
+    +vr('Cluster',s.cluster)+vr('WOK',s.wok)+vr('District',s.district)+vr('Sub District',s.sub_district)+vr('Kabupaten/Kota',s.kabupaten_kota);
+  if(p.nama_proyek||p.kml_path){
+    h+=`<div class="sec">Desain</div>`+vr('ID IHLD',p.ihld_id)+vr('Nama Proyek',p.nama_proyek)+vr('Tipe Design',p.tipe_design)+vr('Topology',p.topology)
+      +vr('Tanggal Desain',p.designed_at?new Date(p.designed_at).toLocaleString('id-ID'):'');
+    if(p.kml_path) h+=`<div><label>File</label><div class="val"><a href="#" onclick="dl('${esc(p.kml_path)}');return false">KML</a> · <a href="#" onclick="dl('${esc(p.boq_path)}');return false">BoQ</a></div></div>`;
+  }
+  if(p.dsi_id) h+=`<div class="sec">DSI</div>`+vr('DSI ID',p.dsi_id)+vr('DSI Name',p.dsi_name);
+  $('vBody').innerHTML=h;
+  const canEdit=isPlan()&&!locked(p);
+  const btn=(label,cls,fn)=>`<button type="button" class="${cls}" onclick="${fn}">${label}</button>`;
+  // Baris 1: Lihat Design | Edit   Baris 2: Hapus | Tutup
+  let acts=btn('Lihat Design','',`location.href='design.html?id=${id}'`);
+  if(canEdit) acts+=btn('Edit','pri',`startEdit('${id}')`);
+  if(canEdit) acts+=btn('Hapus','dng',`deleteArea('${id}')`);
+  acts+=btn('Tutup','','closeView()');
+  $('vActs').innerHTML=acts;
+  showPanel('view',anchorLL,()=>{viewId=null});
+}
+const closeView=()=>{if(panel&&panel.name==='view')closePanel()};
+// Tombol Edit: popup tertutup, semua alat edit aktif; form order muncul saat Selesai ditekan
+function startEdit(id){
+  const p=areaFeatures.find(x=>x.properties.id===id)?.properties; if(!p) return;
+  if(locked(p)) return toast('Polygon DSI Complete terkunci');
+  if(session&&session!==id) return toast('Selesaikan atau batalkan edit polygon yang sedang berjalan dulu');
+  closeView(); stopDraw(); mode=null;
+  session===id?resumeEdit():beginSession(id);
+}
+async function deleteArea(id){
+  const p=areaFeatures.find(x=>x.properties.id===id)?.properties;
+  if(!await ask(`Hapus polygon ${p?p.code:''} (${p?p.name:''})? Tindakan ini tidak bisa dibatalkan.`,'Hapus')) return;
+  const {error}=await sb.from('project_areas').delete().eq('id',id);
+  if(error) return toast(error.message);
+  if(session===id) endSession();
+  hideKml(id); closeView(); toast('Polygon dihapus'); loadAreas();
+}
+async function dl(path){
+  const {data,error}=await sb.storage.from('designs').createSignedUrl(path,60);
+  error?toast(error.message):window.open(data.signedUrl,'_blank');
+}
+function openDialog(title,sub,body,onSave){
+  closePanel();
+  $('m2Title').textContent=title;$('m2Sub').textContent=sub;$('m2Body').innerHTML=body;
+  dlgSave=onSave;showPanel('dlg',anchorLL||map.getCenter(),()=>{dlgSave=null});
+}
+const closeDialog=()=>{if(panel&&panel.name==='dlg')closePanel()};
+$('m2Cancel').onclick=closeDialog;
+$('modal2').addEventListener('keydown',e=>{if(e.key==='Escape')closeDialog()});
+$('m2Save').onclick=async()=>{
+  if(!dlgSave) return; $('m2Save').disabled=true;
+  try{await dlgSave()}catch(err){toast(err.message)}finally{$('m2Save').disabled=false}
+};
+// ---- KML di peta (terhubung ke Polygon ID) ----
+function parseKml(text){
+  const doc=new DOMParser().parseFromString(text,'text/xml');
+  if(doc.getElementsByTagName('parsererror').length) throw new Error('File KML tidak valid');
+  const pts=el=>{const c=el.getElementsByTagName('coordinates')[0];if(!c)return[];
+    return c.textContent.trim().split(/\s+/).map(t=>t.split(',').slice(0,2).map(Number)).filter(a=>a.length===2&&isFinite(a[0])&&isFinite(a[1]))};
+  const ring=el=>{const r=el.getElementsByTagName('LinearRing')[0];return r?pts(r):[]};
+  const feats=[];
+  for(const pm of doc.getElementsByTagName('Placemark')){
+    const props={name:pm.getElementsByTagName('name')[0]?.textContent||'',desc:pm.getElementsByTagName('description')[0]?.textContent||''};
+    const add=g=>feats.push({type:'Feature',properties:props,geometry:g});
+    for(const e of pm.getElementsByTagName('Point')){const c=pts(e)[0];if(c)add({type:'Point',coordinates:c})}
+    for(const e of pm.getElementsByTagName('LineString')){const c=pts(e);if(c.length>1)add({type:'LineString',coordinates:c})}
+    for(const e of pm.getElementsByTagName('Polygon')){
+      const o=e.getElementsByTagName('outerBoundaryIs')[0]; if(!o) continue;
+      const rings=[ring(o),...[...e.getElementsByTagName('innerBoundaryIs')].map(ring)].filter(r=>r.length>3);
+      if(rings.length) add({type:'Polygon',coordinates:rings});
+    }
+  }
+  if(!feats.length) throw new Error('KML tidak berisi objek (Point/LineString/Polygon)');
+  return {type:'FeatureCollection',features:feats};
+}
+// Layer "Desain (KML)": memuat desain polygon yang sedang terlihat di peta
+const KML_MIN_ZOOM=12, KML_BATCH=10;
+const kmlInfo=m=>{$('kmlInfo').textContent=m||''};
+async function loadKmlFor(p){
+  const {data,error}=await sb.storage.from('designs').download(p.kml_path);
+  if(error) throw new Error(error.message);
+  const gj=parseKml(await data.text());
+  const lyr=L.geoJSON(gj,{
+    style:f=>f.geometry.type==='Polygon'?{color:'#7c3aed',weight:2,fillOpacity:.1}:{color:'#e11d48',weight:3},
+    pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:5,color:'#fff',weight:1,fillColor:'#7c3aed',fillOpacity:1}),
+    onEachFeature:(f,l)=>l.bindPopup(`<b>${esc(f.properties.name||'(tanpa nama)')}</b><br>Desain ${esc(p.code||'')}${f.properties.desc?'<br>'+esc(f.properties.desc.slice(0,300)):''}`)
+  });
+  kmlGroup.addLayer(lyr); kmlLayers[p.id]={lyr,path:p.kml_path};
+}
+function hideKml(id){if(kmlLayers[id]){kmlGroup.removeLayer(kmlLayers[id].lyr);delete kmlLayers[id]}}
+async function syncKml(){            // dipanggil saat layer dinyalakan, peta bergerak, atau polygon dimuat ulang
+  if(!kmlOn||kmlBusy) return;
+  for(const id of Object.keys(kmlLayers)){                           // buang desain yang sudah diganti / polygon terhapus
+    const p=areaFeatures.find(f=>f.properties.id===id)?.properties;
+    if(!p||!p.kml_path||p.kml_path!==kmlLayers[id].path) hideKml(id);
+  }
+  if(map.getZoom()<KML_MIN_ZOOM){kmlInfo(`Zoom in (min. ${KML_MIN_ZOOM}) untuk memuat desain`);return}
+  const b=map.getBounds();
+  const todo=areaFeatures.map(f=>f.properties)
+    .filter(p=>p.kml_path&&!kmlLayers[p.id]&&!kmlFail.has(p.id+'|'+p.kml_path)&&layerOf(p.id)?.getBounds().intersects(b)).slice(0,KML_BATCH);
+  const n=()=>Object.keys(kmlLayers).length;
+  if(!todo.length){kmlInfo(n()?`${n()} desain ditampilkan`:'Tidak ada desain di layar');return}
+  kmlBusy=true; kmlInfo('Memuat desain...');
+  const errs=[];
+  await Promise.all(todo.map(p=>loadKmlFor(p).catch(e=>{kmlFail.add(p.id+'|'+p.kml_path);errs.push(`${p.code}: ${e.message}`)})));
+  kmlBusy=false; kmlInfo(`${n()} desain ditampilkan`);
+  if(errs.length) toast('Gagal memuat sebagian desain: '+errs.slice(0,3).join('; '),'error');
+  syncKml();                                                          // lanjutkan bila masih ada sisa
+}
+$('lyKml').onchange=e=>{
+  kmlOn=e.target.checked;
+  if(kmlOn){kmlGroup.addTo(map);syncKml()}else{map.removeLayer(kmlGroup);kmlInfo('')}
+};
+map.on('moveend',()=>{clearTimeout(kmlT);kmlT=setTimeout(syncKml,400)});
+
+// ---- Form order (modal) ----
+let STO=[], order=null;
+async function loadSto(){
+  const {data,error}=await sb.from('sto').select('*').order('sto');
+  if(error) return toast('Gagal memuat STO: '+error.message);
+  STO=data;
+  $('stoList').innerHTML=STO.map(s=>`<option value="${esc(s.sto)}">${esc(s.nama_sto||'')} (${esc(s.kabupaten_kota||'')})</option>`).join('');
+}
+const F={nama:'fNama',area:'fArea',regional:'fReg',branch:'fBranch',cluster:'fCluster',wok:'fWok',district:'fDist',sub_district:'fSub',kabupaten_kota:'fKab'};
+function fillSto(code){
+  const s=STO.find(x=>x.sto===code.trim().toUpperCase());
+  for(const [k,id] of Object.entries(F)){ $(id).value=s?(s[k==='nama'?'nama_sto':k]||''):''; $(id).title=$(id).value }
+  return s;
+}
+$('fSto').oninput=e=>{
+  let v=e.target.value.trim();
+  if(!STO.some(x=>x.sto===v.toUpperCase())){ // cocokkan juga lewat nama STO jika unik
+    const m=STO.filter(x=>(x.nama_sto||'').toUpperCase()===v.toUpperCase());
+    if(m.length===1) v=m[0].sto;
+  }
+  fillSto(v);
+};
+function openOrder(o){
+  closePanel();
+  order=o;
+  $('mTitle').textContent=o.id?'Update Polygon':'Form Order Desain FTTH';
+  $('mSub').textContent=o.edit?o.summary:(o.id?'Perubahan nama atau STO akan mengubah status menjadi Revision Polygon.':'Isi Nama Polygon dan pilih STO. Data wilayah terisi otomatis.');
+  $('mSave').textContent=o.id?'Update':'Simpan'; $('mSave').disabled=!!o.loading;
+  $('fCode').value=o.code||''; $('fName').value=o.name||'';
+  $('fCust').value=o.customer??0; $('fOdp').value=o.odp??0;
+  $('fSto').value=o.sto_code||''; fillSto(o.sto_code||'');
+  showPanel('order',o.ll||anchorLL||map.getCenter(),()=>{const o2=order;order=null;clearPreview();if(o2&&o2.edit&&session&&!o2.saved)resumeEdit()}); $('fName').focus();
+}
+function editOrder(id,ll){
+  const p=areaFeatures.find(x=>x.properties.id===id)?.properties; if(!p) return;
+  openOrder({id,ll,code:p.code,name:p.name,customer:p.customer,odp:p.odp,sto_code:p.sto_code});
+}
+const closeOrder=()=>{if(panel&&panel.name==='order')closePanel()};
+$('mCancel').onclick=closeOrder;
+$('modal').addEventListener('keydown',e=>{if(e.key==='Escape')closeOrder()});
+$('mSave').onclick=async()=>{
+  const name=$('fName').value.trim(), sto=$('fSto').value.trim().toUpperCase();
+  if(!name) return toast('Nama polygon wajib diisi');
+  if(!STO.some(x=>x.sto===sto)) return toast('Pilih STO yang valid dari daftar');
+  if(order.edit) return saveEdit(name,sto);
+  $('mSave').disabled=true;
+  const {error}=await sb.rpc('upsert_area',{p_id:null,p_name:name,p_geojson:order.geo,p_code:order.code,p_sto:sto});
+  $('mSave').disabled=false;
+  if(error) return toast(error.message,'error');
+  closeOrder(); toast('Order disubmit. Status: Submitted Polygon'); loadAreas();
+};
+// Simpan semua perubahan sesi edit sekaligus: titik digeser, bentuk polygon, data form, titik baru
+async function saveEdit(name,sto){
+  const id=order.id, l=layerOf(id), cur=areaFeatures.find(f=>f.properties.id===id)?.properties||{};
+  const geoChanged=!!l&&geoOf(l)!==origGeo, dataChanged=name!==cur.name||sto!==cur.sto_code;
+  const moves=Object.entries(pendingMoves), adds=pendingAdds.slice();
+  $('mSave').disabled=true;
+  try{
+    for(let i=0;i<moves.length;i+=20){
+      const rs=await Promise.all(moves.slice(i,i+20).map(([pid,ll])=>sb.from('points').update({lat:ll.lat,lng:ll.lng}).eq('id',pid)));
+      const bad=rs.find(r=>r.error); if(bad) throw new Error(bad.error.message);
+    }
+    if(geoChanged){const {error}=await saveGeom(id,name,l); if(error) throw new Error(error.message)}
+    if(dataChanged){const {error}=await sb.from('project_areas').update({name,sto_code:sto}).eq('id',id); if(error) throw new Error(error.message)}
+    if(adds.length){const error=await insertPoints(adds.map(a=>({kind:a.kind,un_id:a.un_id,name:a.name,note:a.note,address:a.address,lat:a.lat,lng:a.lng}))); if(error) throw new Error(error.message)}
+  }catch(err){$('mSave').disabled=false; return toast(err.message,'error')}
+  $('mSave').disabled=false;
+  order.saved=true; closeOrder(); finishSession();
+  toast(moves.length||adds.length||geoChanged||dataChanged?'Perubahan disimpan. Status: Revision Polygon':'Tidak ada perubahan');
+  await loadAreas(); loadPoints();
+  const jobs=moves.filter(([pid,m])=>m.kind==='odp'||m.kind==='prospect'); if(jobs.length) refreshAddresses(jobs);   // alamat titik yang digeser, di latar belakang
+}
+
+// ---- Realtime ----
+function subscribe(){
+  sb.channel('live')
+    .on('postgres_changes',{event:'*',schema:'public',table:'points'},debounce(loadPoints,500))
+    .on('postgres_changes',{event:'*',schema:'public',table:'project_areas'},debounce(loadAreas,500))
+    .subscribe();
+}
+map.on('moveend',debounce(loadPoints));
+
+// ---- Auth ----
+async function start(){
+  $('login').style.display='none';
+  ROLE=(await sb.rpc('my_role')).data; applyRole();
+  await Promise.all([loadAreas(),loadSto()]);
+  const {data}=await sb.rpc('data_extent');
+  if(data) map.fitBounds([[data.s,data.w],[data.n,data.e]]); else loadPoints();
+  subscribe();
+}
+$('loginForm').onsubmit=async e=>{
+  e.preventDefault();
+  if(SUPABASE_URL.includes('YOUR-PROJECT')||SUPABASE_KEY.includes('YOUR_ANON')){
+    $('lerr').textContent='SUPABASE_URL dan SUPABASE_KEY di index.html belum diisi'; return;
+  }
+  $('lerr').textContent='';
+  try{
+    const {error}=await sb.auth.signInWithPassword({email:$('em').value.trim(),password:$('pw').value});
+    if(error){$('lerr').textContent=error.message;console.error(error);return}
+    await start();
+  }catch(err){$('lerr').textContent='Gagal terhubung: '+err.message;console.error(err)}
+};
+$('logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
+sb.auth.getSession().then(({data})=>{if(data.session) start()});
+</script>
+</body>
+</html>
